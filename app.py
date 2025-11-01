@@ -36,6 +36,7 @@ st.markdown("""
             color: #FDFEFE !important;
         }
 
+        /* ======= TABLEAU ======= */
         .stDataFrame {
             border: 2px solid var(--blanc);
             border-radius: 12px;
@@ -54,6 +55,7 @@ st.markdown("""
             cursor: pointer;
         }
 
+        /* ======= CHAMPS DE FORMULAIRE ======= */
         input, textarea {
             border-radius: 8px !important;
             border: 1px solid #ccc !important;
@@ -61,6 +63,7 @@ st.markdown("""
             background-color: #FFFFFF !important;
         }
 
+        /* ======= BOUTONS ======= */
         .stButton>button {
             background: linear-gradient(45deg, var(--vert-fonce), var(--jaune-mbb));
             color: white;
@@ -75,6 +78,7 @@ st.markdown("""
             color: black;
         }
 
+        /* ======= BANNIÈRE ======= */
         .banner {
             background: linear-gradient(90deg, var(--vert-fonce), var(--jaune-mbb));
             color: white;
@@ -86,9 +90,16 @@ st.markdown("""
             margin-bottom: 20px;
             box-shadow: 2px 2px 10px rgba(0,0,0,0.3);
         }
+
+        /* ======= ALIGNEMENT DU TITRE ET DU BOUTON ======= */
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
     </style>
 """, unsafe_allow_html=True)
-
 
 # === VISUEL DU MOUVEMENT ===
 if os.path.exists(VISUEL):
@@ -96,34 +107,29 @@ if os.path.exists(VISUEL):
 else:
     st.warning("⚠️ Image du visuel non trouvée.")
 
-
-# === CHARGEMENT DES DONNÉES ===
-@st.cache_data
-def charger_donnees():
-    df = pd.read_excel(FICHIER_EXCEL, sheet_name="Liste des membres", header=1)
-    df.columns = (
-        df.columns.str.strip()
-        .str.lower()
-        .str.replace("é", "e")
-        .str.replace("è", "e")
-        .str.replace("ê", "e")
-        .str.replace("à", "a")
-        .str.replace("ç", "c")
-    )
-    df = df.loc[:, ~df.columns.duplicated()]
-    return df
-
-
+# === CHARGEMENT DU FICHIER EXCEL ===
 if not os.path.exists(FICHIER_EXCEL):
     st.error(f"Le fichier {FICHIER_EXCEL} est introuvable.")
 else:
-    df = charger_donnees()
+    df = pd.read_excel(FICHIER_EXCEL, sheet_name="Liste des membres", header=1)
 
-    # === COMPTER LES QUARTIERS ===
+    # === NORMALISER LES NOMS DE COLONNES ===
+    df.columns = (
+        df.columns.str.strip()
+                  .str.lower()
+                  .str.replace("é", "e")
+                  .str.replace("è", "e")
+                  .str.replace("ê", "e")
+                  .str.replace("à", "a")
+                  .str.replace("ç", "c")
+    )
+    df = df.loc[:, ~df.columns.duplicated()]  # supprime les colonnes en double
+
+    # Identifier la colonne "adresse"
     col_adresse = [c for c in df.columns if "adres" in c]
     nb_quartiers = len(df[col_adresse[0]].dropna().unique()) if col_adresse else 0
 
-    # === TITRE + BOUTON ===
+    # === TITRE + BOUTON ALIGNÉS ===
     col1, col2 = st.columns([4, 1])
     with col1:
         st.markdown("<div class='banner'>MALIKA BI ÑU BËGG – Une nouvelle ère s’annonce 🌍</div>", unsafe_allow_html=True)
@@ -136,9 +142,18 @@ else:
     date_du_jour = datetime.now().strftime("%d %B %Y")
     st.subheader(f"👥 Liste actuelle des membres à la date du {date_du_jour}")
 
-    # === AFFICHAGE DES DONNÉES ===
+    # === MODE AFFICHAGE PAR QUARTIER ===
     if afficher_par_quartier and col_adresse:
         st.markdown("### 🏘️ Membres regroupés par adresse (quartier)")
+
+        colonnes = {
+            "prenom": [c for c in df.columns if "prenom" in c],
+            "nom": [c for c in df.columns if "nom" in c],
+            "telephone": [c for c in df.columns if "tel" in c],
+            "profession": [c for c in df.columns if "prof" in c],
+            "commission": [c for c in df.columns if "comm" in c],
+        }
+
         adresse_col = col_adresse[0]
         quartiers_uniques = df[adresse_col].dropna().unique()
         total_membres = 0
@@ -149,6 +164,11 @@ else:
             total_membres += nb_membres
 
             st.markdown(f"#### 📍 {quartier} ({nb_membres} membre{'s' if nb_membres > 1 else ''})")
+
+            colonnes_a_afficher = [c[0] for c in colonnes.values() if c]
+            membres_quartier = membres_quartier[colonnes_a_afficher]
+            membres_quartier = membres_quartier.loc[:, ~membres_quartier.columns.duplicated()]
+
             st.dataframe(membres_quartier, use_container_width=True)
             st.divider()
 
@@ -180,6 +200,7 @@ else:
 
             if submitted:
                 if prenom and nom and telephone:
+                    # ✅ Contrôle des doublons téléphone
                     telephone_sans_espaces = str(telephone).replace(" ", "").strip()
                     col_tel = [c for c in df.columns if "tel" in c]
                     if col_tel:
@@ -199,14 +220,9 @@ else:
                             "Commission": commission,
                             "Notes": notes
                         }
-                        # 🔹 Ajouter et sauvegarder
                         df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
                         df.to_excel(FICHIER_EXCEL, index=False, sheet_name="Liste des membres")
                         st.success(f"✅ {prenom} {nom} ajouté avec succès !")
-
-                        # 🔄 Recharger les données pour inclure la nouvelle adresse
-                        st.cache_data.clear()
-                        st.rerun()
                 else:
                     st.warning("⚠️ Merci de renseigner le prénom, le nom et le numéro de téléphone.")
     elif code:
