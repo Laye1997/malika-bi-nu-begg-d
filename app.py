@@ -126,14 +126,45 @@ else:
     date_du_jour = datetime.now().strftime("%d %B %Y")
     st.subheader(f"👥 Liste actuelle des membres à la date du {date_du_jour}")
 
+    # === MODE AFFICHAGE PAR QUARTIER ===
     if afficher_par_quartier:
         st.markdown("### 🏘️ Membres regroupés par adresse (quartier)")
-        quartiers_uniques = df["Adresse"].dropna().unique()
-        for quartier in sorted(quartiers_uniques):
-            st.markdown(f"#### 📍 {quartier}")
-            membres_quartier = df[df["Adresse"] == quartier][["Prénom", "Nom", "Téléphone", "Profession", "Commission"]]
-            st.dataframe(membres_quartier, use_container_width=True)
-            st.divider()
+
+        # ✅ Normaliser les noms de colonnes
+        df.columns = (
+            df.columns.str.strip()
+                      .str.lower()
+                      .str.replace("é", "e")
+                      .str.replace("è", "e")
+                      .str.replace("ê", "e")
+                      .str.replace("à", "a")
+                      .str.replace("ç", "c")
+        )
+
+        # ✅ Identifier les colonnes
+        colonnes = {
+            "prenom": [c for c in df.columns if "prenom" in c],
+            "nom": [c for c in df.columns if "nom" in c],
+            "adresse": [c for c in df.columns if "adres" in c],
+            "telephone": [c for c in df.columns if "tel" in c],
+            "profession": [c for c in df.columns if "prof" in c],
+            "commission": [c for c in df.columns if "comm" in c],
+        }
+
+        if not colonnes["adresse"]:
+            st.error("❌ La colonne 'Adresse' est introuvable dans le fichier Excel.")
+        else:
+            adresse_col = colonnes["adresse"][0]
+            quartiers_uniques = df[adresse_col].dropna().unique()
+
+            for quartier in sorted(quartiers_uniques):
+                st.markdown(f"#### 📍 {quartier}")
+
+                colonnes_a_afficher = [c[0] for c in colonnes.values() if c]
+                membres_quartier = df[df[adresse_col] == quartier][colonnes_a_afficher]
+
+                st.dataframe(membres_quartier, use_container_width=True)
+                st.divider()
     else:
         st.dataframe(df, use_container_width=True)
 
@@ -161,9 +192,8 @@ else:
 
             if submitted:
                 if prenom and nom and telephone:
-                    # === Contrôle des doublons sur le numéro de téléphone ===
                     telephone_sans_espaces = str(telephone).replace(" ", "").strip()
-                    numeros_existants = df["Téléphone"].astype(str).str.replace(" ", "").str.strip()
+                    numeros_existants = df["telephone"].astype(str).str.replace(" ", "").str.strip() if "telephone" in df.columns else []
 
                     if telephone_sans_espaces in numeros_existants.values:
                         st.error("❌ Ce numéro de téléphone est déjà enregistré dans la base de données.")
