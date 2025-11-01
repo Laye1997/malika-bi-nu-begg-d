@@ -10,10 +10,9 @@ VISUEL = "561812309_122099008227068424_7173387226638749981_n.jpg"
 # === PARAMÈTRES DE LA PAGE ===
 st.set_page_config(page_title="Base de données MBB", page_icon="📘", layout="wide")
 
-# === STYLE PERSONNALISÉ ===
+# === STYLE PERSONNALISÉ AUX COULEURS DU VISUEL ===
 st.markdown("""
     <style>
-        /* ======= COULEURS ======= */
         :root {
             --vert-fonce: #145A32;
             --vert-clair: #7DCEA0;
@@ -21,20 +20,17 @@ st.markdown("""
             --blanc: #FFFFFF;
         }
 
-        /* ======= FOND GRADIENT ======= */
         .stApp {
             background: linear-gradient(120deg, var(--vert-fonce), var(--jaune-mbb));
             color: var(--blanc);
             font-family: "Segoe UI", sans-serif;
         }
 
-        /* ======= TITRES ======= */
         h1, h2, h3 {
             color: #FFFFFF !important;
             text-shadow: 1px 1px 2px rgba(0,0,0,0.4);
         }
 
-        /* ======= TEXTE ======= */
         p, label, span, div {
             color: #FDFEFE !important;
         }
@@ -121,11 +117,10 @@ else:
     st.warning("⚠️ Image du visuel non trouvée.")
 
 st.markdown("<div class='banner'>MALIKA BI ÑU BËGG – Une nouvelle ère s’annonce 🌍</div>", unsafe_allow_html=True)
-
 st.title("📘 Base de données du Mouvement - MBB")
 st.markdown("<p>Bienvenue dans la base de données des membres de <b>Malika Bi Ñu Bëgg</b>.</p>", unsafe_allow_html=True)
 
-# === CHARGEMENT DES DONNÉES ===
+# === CHARGEMENT DU FICHIER EXCEL ===
 if not os.path.exists(FICHIER_EXCEL):
     st.error(f"Le fichier {FICHIER_EXCEL} est introuvable.")
 else:
@@ -157,20 +152,27 @@ else:
             submitted = st.form_submit_button("Ajouter le membre")
 
             if submitted:
-                if prenom and nom:
-                    new_row = {
-                        "Prénom": prenom,
-                        "Nom": nom,
-                        "Adresse": adresse,
-                        "Téléphone": telephone,
-                        "Profession": profession,
-                        "Commission": commission,
-                        "Notes": notes
-                    }
-                    df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
-                    df.to_excel(FICHIER_EXCEL, index=False, sheet_name="Liste des membres")
-                    st.success(f"✅ {prenom} {nom} ajouté avec succès !")
+                if prenom and nom and telephone:
+                    # === Contrôle des doublons sur le numéro de téléphone ===
+                    telephone_sans_espaces = str(telephone).replace(" ", "").strip()
+                    numeros_existants = df["Téléphone"].astype(str).str.replace(" ", "").str.strip()
+
+                    if telephone_sans_espaces in numeros_existants.values:
+                        st.error("❌ Ce numéro de téléphone est déjà enregistré dans la base de données.")
+                    else:
+                        new_row = {
+                            "Prénom": prenom,
+                            "Nom": nom,
+                            "Adresse": adresse,
+                            "Téléphone": telephone,
+                            "Profession": profession,
+                            "Commission": commission,
+                            "Notes": notes
+                        }
+                        df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
+                        df.to_excel(FICHIER_EXCEL, index=False, sheet_name="Liste des membres")
+                        st.success(f"✅ {prenom} {nom} ajouté avec succès !")
                 else:
-                    st.warning("⚠️ Merci de renseigner au minimum le prénom et le nom.")
+                    st.warning("⚠️ Merci de renseigner le prénom, le nom et le numéro de téléphone.")
     elif code:
         st.error("❌ Code d'accès incorrect.")
