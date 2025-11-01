@@ -15,7 +15,7 @@ st.set_page_config(
 )
 
 # === STYLE CSS PERSONNALISÉ ===
-st.markdown("""
+st.markdownst.markdown("""
     <style>
         /* ======= COULEURS DU MOUVEMENT ======= */
         :root {
@@ -48,14 +48,40 @@ st.markdown("""
             border-radius: 10px;
         }
 
-        /* 🔥 Couleur du survol (hover) des lignes */
+        /* ======= Lignes survolées ======= */
         [data-testid="stDataFrame"] table tbody tr:hover {
             background-color: var(--vert-clair) !important;
             color: var(--texte-fonce) !important;
             cursor: pointer;
         }
 
-        /* ======= BOUTONS ======= */
+        /* ======= BARRE DE RECHERCHE & BOUTONS TABLEAU ======= */
+        [data-testid="stDataFrame"] input[type="text"] {
+            background-color: #FFFFFF !important;
+            color: var(--texte-fonce) !important;
+            border: 1px solid var(--vert-mbb) !important;
+            border-radius: 6px !important;
+            padding: 5px 10px !important;
+        }
+
+        [data-testid="stDataFrame"] input[type="text"]::placeholder {
+            color: #555 !important;
+        }
+
+        /* Boutons (loupe, plein écran, téléchargement) */
+        [data-testid="stToolbar"] button {
+            background-color: var(--vert-mbb) !important;
+            color: white !important;
+            border-radius: 6px !important;
+            border: none !important;
+        }
+
+        [data-testid="stToolbar"] button:hover {
+            background-color: var(--jaune-mbb) !important;
+            color: black !important;
+        }
+
+        /* ======= BOUTONS GÉNÉRAUX ======= */
         .stButton>button {
             background-color: var(--vert-mbb);
             color: white;
@@ -75,7 +101,7 @@ st.markdown("""
             border-top: 2px solid var(--vert-mbb);
         }
 
-        /* ======= CHAMPS ======= */
+        /* ======= CHAMPS DE FORMULAIRE ======= */
         input, textarea {
             border-radius: 8px !important;
             border: 1px solid #ccc !important;
@@ -83,6 +109,7 @@ st.markdown("""
         }
     </style>
 """, unsafe_allow_html=True)
+
 
 # === ENTÊTE AVEC VISUEL ===
 if os.path.exists(VISUEL):
@@ -147,3 +174,4 @@ else:
                     st.warning("⚠️ Merci de renseigner au minimum le prénom et le nom.")
     elif code:
         st.error("❌ Code d'accès incorrect.")
+
