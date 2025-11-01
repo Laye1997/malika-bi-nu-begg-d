@@ -3,28 +3,77 @@ import pandas as pd
 import os
 
 FICHIER_EXCEL = "Liste_Membres.xlsx"
-CODE_SECRET = "MBB2025"  # à changer
+CODE_SECRET = "MBB2025"  # à modifier si besoin
+VISUEL = "561812309_122099008227068424_7173387226638749981_n.jpg"
 
-st.set_page_config(page_title="Base de données MBB", layout="wide")
+# 🎨 Configuration du site
+st.set_page_config(
+    page_title="Base de données MBB",
+    page_icon="📘",
+    layout="wide",
+)
+
+# 🌈 Style CSS personnalisé
+st.markdown("""
+    <style>
+        body {
+            background-color: #FFFFFF;
+        }
+        .main {
+            background-color: #FFFFFF;
+        }
+        h1, h2, h3 {
+            color: #145A32;
+        }
+        .stApp {
+            background-color: #FFFFFF;
+        }
+        div[data-testid="stHeader"] {
+            background-color: #145A32 !important;
+        }
+        .stButton>button {
+            background-color: #145A32;
+            color: white;
+            border-radius: 10px;
+            font-weight: bold;
+        }
+        .stButton>button:hover {
+            background-color: #F4D03F;
+            color: black;
+        }
+        .stDataFrame {
+            border: 2px solid #145A32;
+            border-radius: 10px;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
+# 🖼️ En-tête avec le visuel
+if os.path.exists(VISUEL):
+    st.image(VISUEL, use_container_width=True)
+else:
+    st.warning("⚠️ Image du visuel non trouvée.")
 
 st.title("📘 Base de données du Mouvement - MBB")
-st.markdown("Bienvenue dans la base de données des membres de **Malika Bi Ñu Bëgg**.")
+st.markdown(
+    "<p style='font-size:18px;'>Bienvenue dans la base de données des membres de <b>Malika Bi Ñu Bëgg</b>.<br>"
+    "Une nouvelle ère s’annonce 🌍</p>", unsafe_allow_html=True
+)
 
-# Vérifier que le fichier existe
+# 📊 Affichage de la liste des membres
 if not os.path.exists(FICHIER_EXCEL):
     st.error(f"Le fichier {FICHIER_EXCEL} est introuvable.")
 else:
-    # Charger les membres existants (ligne 0 comme en-tête)
     df = pd.read_excel(FICHIER_EXCEL, sheet_name="Liste des membres", header=1)
 
-    st.subheader("👥 Liste actuelle des membres")
+    st.markdown("<h2>👥 Liste actuelle des membres</h2>", unsafe_allow_html=True)
     st.dataframe(df, use_container_width=True)
 
     st.divider()
 
-    st.subheader("➕ Ajouter un nouveau membre")
+    st.markdown("<h2>➕ Ajouter un nouveau membre</h2>", unsafe_allow_html=True)
 
-    code = st.text_input("Entrez le code d'accès pour ajouter un membre :", type="password")
+    code = st.text_input("Entrez le code d'accès :", type="password")
 
     if code == CODE_SECRET:
         with st.form("ajout_membre"):
@@ -59,4 +108,3 @@ else:
                     st.warning("⚠️ Merci de renseigner au minimum le prénom et le nom.")
     elif code:
         st.error("❌ Code d'accès incorrect.")
-
