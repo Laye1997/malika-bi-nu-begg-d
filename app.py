@@ -2,17 +2,23 @@ import streamlit as st
 import pandas as pd
 import os
 from datetime import datetime
-import matplotlib.pyplot as plt
+import plotly.express as px
 
 # === CONFIGURATION ===
 FICHIER_EXCEL = "Liste_Membres.xlsx"
 CODE_SECRET = "MBB2025"
 VISUEL = "561812309_122099008227068424_7173387226638749981_n.jpg"
 
+# === IDENTIFIANTS DE CONNEXION ===
+USERS = {
+    "admin": "mbb2025",     # 🔑 identifiant : mot de passe
+    "president": "malika2025"
+}
+
 # === PARAMÈTRES DE LA PAGE ===
 st.set_page_config(page_title="Base de données MBB", page_icon="📘", layout="wide")
 
-# === STYLE PERSONNALISÉ ===
+# === STYLE GÉNÉRAL ===
 st.markdown("""
     <style>
         :root {
@@ -34,19 +40,6 @@ st.markdown("""
 
         p, label, span, div {
             color: #FDFEFE !important;
-        }
-
-        .stDataFrame {
-            border: 2px solid var(--blanc);
-            border-radius: 12px;
-            background-color: rgba(255, 255, 255, 0.95);
-            color: black !important;
-        }
-
-        [data-testid="stDataFrame"] table tbody tr:hover {
-            background-color: #FCF3CF !important;
-            color: #000000 !important;
-            cursor: pointer;
         }
 
         .stButton>button {
@@ -82,20 +75,44 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# === PAGE DE CONNEXION ===
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+
+if not st.session_state.authenticated:
+    st.markdown("<div class='banner'>🔐 Accès sécurisé – Base de données MBB</div>", unsafe_allow_html=True)
+    st.title("Connexion requise")
+
+    username = st.text_input("👤 Identifiant")
+    password = st.text_input("🔑 Mot de passe", type="password")
+
+    if st.button("Se connecter"):
+        if username in USERS and USERS[username] == password:
+            st.session_state.authenticated = True
+            st.success("✅ Connexion réussie !")
+            st.rerun()
+        else:
+            st.error("❌ Identifiant ou mot de passe incorrect.")
+    st.stop()
+
+# === SI CONNECTÉ : PAGE PRINCIPALE ===
+st.sidebar.success(f"Connecté en tant que **{username}**")
+if st.sidebar.button("🔒 Déconnexion"):
+    st.session_state.authenticated = False
+    st.rerun()
+
 # === VISUEL DU MOUVEMENT ===
 if os.path.exists(VISUEL):
     st.image(VISUEL, use_container_width=True)
-else:
-    st.warning("⚠️ Image du visuel non trouvée.")
 
-# === CHARGEMENT DU FICHIER ===
+# === CHARGEMENT DU FICHIER EXCEL ===
 if not os.path.exists(FICHIER_EXCEL):
     st.error(f"❌ Le fichier {FICHIER_EXCEL} est introuvable.")
     st.stop()
 
 df = pd.read_excel(FICHIER_EXCEL, sheet_name="Liste des membres", header=1)
 
-# === NORMALISER LES NOMS DE COLONNES ===
+# === NORMALISER LES COLONNES ===
 df.columns = (
     df.columns.str.strip()
               .str.lower()
@@ -105,15 +122,14 @@ df.columns = (
               .str.replace("à", "a")
               .str.replace("ç", "c")
 )
-df = df.loc[:, ~df.columns.duplicated()]  # supprime les colonnes en double
-
+df = df.loc[:, ~df.columns.duplicated()]
 col_adresse = [c for c in df.columns if "adres" in c]
 nb_quartiers = len(df[col_adresse[0]].dropna().unique()) if col_adresse else 0
 
 # === ONGLET DE NAVIGATION ===
-tabs = st.tabs(["🏠 Accueil", f"🏘️ Afficher par Quartier ({nb_quartiers})", "🚫 Membres Non Inscrits"])
+tabs = st.tabs(["🏠 Accueil", f"🏘️ Par Quartier ({nb_quartiers})", "🚫 Membres Non Inscrits"])
 
-# ------------------------- 🏠 ONGLET ACCUEIL -------------------------
+# 🏠 ONGLET ACCUEIL
 with tabs[0]:
     st.markdown("<div class='banner'>MALIKA BI ÑU BËGG – Une nouvelle ère s’annonce 🌍</div>", unsafe_allow_html=True)
     st.title("📘 Base de données du Mouvement - MBB")
@@ -153,7 +169,7 @@ with tabs[0]:
                         numeros_existants = pd.Series([])
 
                     if telephone_sans_espaces in numeros_existants.values:
-                        st.error("❌ Ce numéro de téléphone est déjà enregistré dans la base de données.")
+                        st.error("❌ Ce numéro de téléphone existe déjà.")
                     else:
                         new_row = {
                             "Prénom": prenom,
@@ -172,43 +188,35 @@ with tabs[0]:
     elif code:
         st.error("❌ Code d'accès incorrect.")
 
-# ------------------------- 🏘️ ONGLET AFFICHER PAR QUARTIER -------------------------
+# 🏘️ ONGLET PAR QUARTIER
 with tabs[1]:
-    st.markdown("### 🏘️ Membres regroupés par adresse (quartier)")
-    if not col_adresse:
-        st.error("❌ La colonne 'Adresse' est introuvable dans le fichier Excel.")
-    else:
+    if col_adresse:
         adresse_col = col_adresse[0]
-        quartiers_uniques = df[adresse_col].dropna().unique()
-        total_membres = 0
-
-        # --- Calcul des membres par quartier pour le graphique ---
         membres_par_quartier = df[adresse_col].value_counts().sort_index()
 
-        # --- Afficher le graphique ---
-        st.markdown("#### 📊 Répartition des membres par quartier")
-        fig, ax = plt.subplots()
-        colors = plt.cm.YlGn([i / len(membres_par_quartier) for i in range(len(membres_par_quartier))])
-        ax.pie(membres_par_quartier, labels=membres_par_quartier.index, autopct='%1.1f%%', startangle=90, colors=colors)
-        ax.axis('equal')
-        st.pyplot(fig)
+        st.markdown("### 📊 Répartition des membres par quartier")
+        fig = px.pie(
+            names=membres_par_quartier.index,
+            values=membres_par_quartier.values,
+            color_discrete_sequence=px.colors.sequential.YlGn,
+            title="Répartition des membres par quartier"
+        )
+        st.plotly_chart(fig, use_container_width=True)
 
         st.divider()
+        total_membres = 0
 
-        # --- Tableau par quartier ---
-        for quartier in sorted(quartiers_uniques):
-            membres_quartier = df[df[adresse_col] == quartier]
-            nb_membres = len(membres_quartier)
+        for quartier, nb_membres in membres_par_quartier.items():
             total_membres += nb_membres
-
             st.markdown(f"#### 📍 {quartier} ({nb_membres} membre{'s' if nb_membres > 1 else ''})")
-            colonnes_afficher = [c for c in df.columns if c not in ["notes"]]
-            st.dataframe(membres_quartier[colonnes_afficher], use_container_width=True)
+            st.dataframe(df[df[adresse_col] == quartier], use_container_width=True)
             st.divider()
 
         st.markdown(f"### 🔢 Total général : **{total_membres} membres**")
+    else:
+        st.error("❌ Colonne 'Adresse' introuvable dans le fichier.")
 
-# ------------------------- 🚫 ONGLET MEMBRES NON INSCRITS -------------------------
+# 🚫 ONGLET MEMBRES NON INSCRITS
 with tabs[2]:
     st.markdown("### 🚫 Membres Non Inscrits")
-    st.info("Aucune donnée à afficher pour le moment. Cette section sera développée ultérieurement.")
+    st.info("Aucune donnée à afficher pour le moment.")
