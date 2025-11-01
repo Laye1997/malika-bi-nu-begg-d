@@ -211,4 +211,3 @@ else:
                     st.warning("⚠️ Merci de renseigner le prénom, le nom et le numéro de téléphone.")
     elif code:
         st.error("❌ Code d'accès incorrect.")
-
