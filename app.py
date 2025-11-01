@@ -2,23 +2,25 @@ import streamlit as st
 import pandas as pd
 import os
 
+# === CONFIGURATION DE BASE ===
 FICHIER_EXCEL = "Liste_Membres.xlsx"
 CODE_SECRET = "MBB2025"
 VISUEL = "561812309_122099008227068424_7173387226638749981_n.jpg"
 
-# 🎨 Configuration générale
+# === PARAMÈTRES DE LA PAGE ===
 st.set_page_config(
     page_title="Base de données MBB",
     page_icon="📘",
     layout="wide",
 )
 
-# 🌈 Style CSS personnalisé (amélioré)
+# === STYLE CSS PERSONNALISÉ ===
 st.markdown("""
     <style>
         /* ======= COULEURS DU MOUVEMENT ======= */
         :root {
             --vert-mbb: #145A32;
+            --vert-clair: #D4EFDF;
             --jaune-mbb: #F4D03F;
             --texte-fonce: #1C2833;
             --fond-blanc: #FFFFFF;
@@ -44,6 +46,13 @@ st.markdown("""
         .stDataFrame {
             border: 2px solid var(--vert-mbb);
             border-radius: 10px;
+        }
+
+        /* 🔥 Couleur du survol (hover) des lignes */
+        [data-testid="stDataFrame"] table tbody tr:hover {
+            background-color: var(--vert-clair) !important;
+            color: var(--texte-fonce) !important;
+            cursor: pointer;
         }
 
         /* ======= BOUTONS ======= */
@@ -75,7 +84,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 🖼️ En-tête avec ton visuel
+# === ENTÊTE AVEC VISUEL ===
 if os.path.exists(VISUEL):
     st.image(VISUEL, use_container_width=True)
 else:
@@ -89,7 +98,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# 📊 Charger la base de données
+# === CHARGEMENT DU FICHIER EXCEL ===
 if not os.path.exists(FICHIER_EXCEL):
     st.error(f"Le fichier {FICHIER_EXCEL} est introuvable.")
 else:
@@ -100,6 +109,7 @@ else:
 
     st.divider()
 
+    # === FORMULAIRE D'AJOUT ===
     st.markdown("<h2>➕ Ajouter un nouveau membre</h2>", unsafe_allow_html=True)
 
     code = st.text_input("Entrez le code d'accès :", type="password")
