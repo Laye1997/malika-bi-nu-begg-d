@@ -3,64 +3,93 @@ import pandas as pd
 import os
 
 FICHIER_EXCEL = "Liste_Membres.xlsx"
-CODE_SECRET = "MBB2025"  # à modifier si besoin
+CODE_SECRET = "MBB2025"
 VISUEL = "561812309_122099008227068424_7173387226638749981_n.jpg"
 
-# 🎨 Configuration du site
+# 🎨 Configuration générale
 st.set_page_config(
     page_title="Base de données MBB",
     page_icon="📘",
     layout="wide",
 )
 
-# 🌈 Style CSS personnalisé
+# 🌈 Style CSS personnalisé (amélioré)
 st.markdown("""
     <style>
-        body {
-            background-color: #FFFFFF;
+        /* ======= COULEURS DU MOUVEMENT ======= */
+        :root {
+            --vert-mbb: #145A32;
+            --jaune-mbb: #F4D03F;
+            --texte-fonce: #1C2833;
+            --fond-blanc: #FFFFFF;
         }
-        .main {
-            background-color: #FFFFFF;
-        }
-        h1, h2, h3 {
-            color: #145A32;
-        }
+
+        /* ======= PAGE ======= */
         .stApp {
-            background-color: #FFFFFF;
+            background-color: var(--fond-blanc);
+            color: var(--texte-fonce);
+            font-family: "Segoe UI", sans-serif;
         }
-        div[data-testid="stHeader"] {
-            background-color: #145A32 !important;
+
+        h1, h2, h3, h4 {
+            color: var(--vert-mbb) !important;
+            font-weight: 700;
         }
+
+        p, label, span, div {
+            color: var(--texte-fonce) !important;
+        }
+
+        /* ======= TABLEAU ======= */
+        .stDataFrame {
+            border: 2px solid var(--vert-mbb);
+            border-radius: 10px;
+        }
+
+        /* ======= BOUTONS ======= */
         .stButton>button {
-            background-color: #145A32;
+            background-color: var(--vert-mbb);
             color: white;
             border-radius: 10px;
             font-weight: bold;
+            border: none;
         }
+
         .stButton>button:hover {
-            background-color: #F4D03F;
+            background-color: var(--jaune-mbb);
             color: black;
+            border: 1px solid var(--vert-mbb);
         }
-        .stDataFrame {
-            border: 2px solid #145A32;
-            border-radius: 10px;
+
+        /* ======= SEPARATEURS ======= */
+        hr, .stDivider {
+            border-top: 2px solid var(--vert-mbb);
+        }
+
+        /* ======= CHAMPS ======= */
+        input, textarea {
+            border-radius: 8px !important;
+            border: 1px solid #ccc !important;
+            color: var(--texte-fonce) !important;
         }
     </style>
 """, unsafe_allow_html=True)
 
-# 🖼️ En-tête avec le visuel
+# 🖼️ En-tête avec ton visuel
 if os.path.exists(VISUEL):
     st.image(VISUEL, use_container_width=True)
 else:
-    st.warning("⚠️ Image du visuel non trouvée.")
+    st.info("🔰 Bienvenue dans la base de données MBB — visuel non chargé.")
 
 st.title("📘 Base de données du Mouvement - MBB")
 st.markdown(
-    "<p style='font-size:18px;'>Bienvenue dans la base de données des membres de <b>Malika Bi Ñu Bëgg</b>.<br>"
-    "Une nouvelle ère s’annonce 🌍</p>", unsafe_allow_html=True
+    "<p style='font-size:18px;'>Bienvenue dans la base de données des membres de "
+    "<b>Malika Bi Ñu Bëgg</b>.<br>"
+    "<span style='color:#145A32; font-weight:bold;'>Une nouvelle ère s’annonce 🌍</span></p>",
+    unsafe_allow_html=True
 )
 
-# 📊 Affichage de la liste des membres
+# 📊 Charger la base de données
 if not os.path.exists(FICHIER_EXCEL):
     st.error(f"Le fichier {FICHIER_EXCEL} est introuvable.")
 else:
