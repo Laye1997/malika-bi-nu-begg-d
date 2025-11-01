@@ -2,60 +2,74 @@ import streamlit as st
 import pandas as pd
 import os
 
-# === CONFIGURATION DE BASE ===
+# === CONFIGURATION ===
 FICHIER_EXCEL = "Liste_Membres.xlsx"
 CODE_SECRET = "MBB2025"
 VISUEL = "561812309_122099008227068424_7173387226638749981_n.jpg"
 
 # === PARAMÈTRES DE LA PAGE ===
-st.set_page_config(
-    page_title="Base de données MBB",
-    page_icon="📘",
-    layout="wide",
-)
+st.set_page_config(page_title="Base de données MBB", page_icon="📘", layout="wide")
 
-# === STYLE CSS PERSONNALISÉ ===
+# === STYLE PERSONNALISÉ AUX COULEURS DU VISUEL ===
 st.markdown("""
     <style>
-        /* ======= COULEURS DU MOUVEMENT ======= */
         :root {
             --vert-mbb: #145A32;
-            --vert-clair: #D4EFDF;
+            --vert-clair: #7DCEA0;
             --jaune-mbb: #F4D03F;
-            --texte-fonce: #1C2833;
             --fond-blanc: #FFFFFF;
+            --texte-fonce: #1C2833;
         }
 
-        /* ======= PAGE ======= */
         .stApp {
             background-color: var(--fond-blanc);
             color: var(--texte-fonce);
             font-family: "Segoe UI", sans-serif;
         }
 
-        h1, h2, h3, h4 {
-            color: var(--vert-mbb) !important;
+        h1, h2, h3 {
+            color: var(--vert-mbb);
             font-weight: 700;
         }
 
         p, label, span, div {
-            color: var(--texte-fonce) !important;
+            color: var(--texte-fonce);
         }
 
-        /* ======= TABLEAU ======= */
+        /* === Boutons === */
+        .stButton>button {
+            background-color: var(--vert-mbb);
+            color: white;
+            border-radius: 10px;
+            font-weight: bold;
+            border: none;
+        }
+        .stButton>button:hover {
+            background-color: var(--jaune-mbb);
+            color: black;
+            border: 1px solid var(--vert-mbb);
+        }
+
+        /* === Tableau === */
         .stDataFrame {
             border: 2px solid var(--vert-mbb);
             border-radius: 10px;
         }
 
-        /* 🔥 Lignes survolées (hover) */
         [data-testid="stDataFrame"] table tbody tr:hover {
-            background-color: var(--vert-clair) !important;
+            background-color: #D4EFDF !important;
             color: var(--texte-fonce) !important;
             cursor: pointer;
         }
 
-        /* ======= BARRE DE RECHERCHE ET BOUTONS DU TABLEAU ======= */
+        /* === Champs de saisie === */
+        input, textarea {
+            border-radius: 6px !important;
+            border: 1px solid #ccc !important;
+            color: var(--texte-fonce) !important;
+        }
+
+        /* === Barre de recherche et boutons du tableau === */
         [data-testid="stDataFrame"] input[type="text"] {
             background-color: #FFFFFF !important;
             color: var(--texte-fonce) !important;
@@ -64,11 +78,6 @@ st.markdown("""
             padding: 5px 10px !important;
         }
 
-        [data-testid="stDataFrame"] input[type="text"]::placeholder {
-            color: #555 !important;
-        }
-
-        /* Boutons (loupe, plein écran, téléchargement) */
         [data-testid="stToolbar"] button {
             background-color: var(--vert-mbb) !important;
             color: white !important;
@@ -81,64 +90,45 @@ st.markdown("""
             color: black !important;
         }
 
-        /* ======= BOUTONS GÉNÉRAUX ======= */
-        .stButton>button {
+        /* === Bandeau supérieur === */
+        .banner {
             background-color: var(--vert-mbb);
             color: white;
+            padding: 15px;
             border-radius: 10px;
+            text-align: center;
             font-weight: bold;
-            border: none;
-        }
-
-        .stButton>button:hover {
-            background-color: var(--jaune-mbb);
-            color: black;
-            border: 1px solid var(--vert-mbb);
-        }
-
-        /* ======= SEPARATEURS ======= */
-        hr, .stDivider {
-            border-top: 2px solid var(--vert-mbb);
-        }
-
-        /* ======= CHAMPS DE FORMULAIRE ======= */
-        input, textarea {
-            border-radius: 8px !important;
-            border: 1px solid #ccc !important;
-            color: var(--texte-fonce) !important;
+            font-size: 22px;
+            margin-bottom: 20px;
         }
     </style>
 """, unsafe_allow_html=True)
 
-# === ENTÊTE AVEC VISUEL ===
+# === AFFICHAGE DU VISUEL ET TITRE ===
 if os.path.exists(VISUEL):
     st.image(VISUEL, use_container_width=True)
 else:
-    st.info("🔰 Bienvenue dans la base de données MBB — visuel non chargé.")
+    st.warning("⚠️ Image du visuel non trouvée.")
 
+st.markdown("<div class='banner'>MALIKA BI ÑU BËGG – Une nouvelle ère s’annonce 🌍</div>", unsafe_allow_html=True)
 st.title("📘 Base de données du Mouvement - MBB")
-st.markdown(
-    "<p style='font-size:18px;'>Bienvenue dans la base de données des membres de "
-    "<b>Malika Bi Ñu Bëgg</b>.<br>"
-    "<span style='color:#145A32; font-weight:bold;'>Une nouvelle ère s’annonce 🌍</span></p>",
-    unsafe_allow_html=True
-)
+st.markdown("Bienvenue dans la base de données des membres de **Malika Bi Ñu Bëgg**.")
 
-# === CHARGEMENT DU FICHIER EXCEL ===
+# === AFFICHAGE DU TABLEAU ===
 if not os.path.exists(FICHIER_EXCEL):
     st.error(f"Le fichier {FICHIER_EXCEL} est introuvable.")
 else:
     df = pd.read_excel(FICHIER_EXCEL, sheet_name="Liste des membres", header=1)
 
-    st.markdown("<h2>👥 Liste actuelle des membres</h2>", unsafe_allow_html=True)
+    st.subheader("👥 Liste actuelle des membres")
     st.dataframe(df, use_container_width=True)
 
     st.divider()
 
     # === FORMULAIRE D'AJOUT ===
-    st.markdown("<h2>➕ Ajouter un nouveau membre</h2>", unsafe_allow_html=True)
+    st.subheader("➕ Ajouter un nouveau membre")
 
-    code = st.text_input("Entrez le code d'accès :", type="password")
+    code = st.text_input("Entrez le code d'accès pour ajouter un membre :", type="password")
 
     if code == CODE_SECRET:
         with st.form("ajout_membre"):
@@ -166,10 +156,4 @@ else:
                         "Commission": commission,
                         "Notes": notes
                     }
-                    df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
-                    df.to_excel(FICHIER_EXCEL, index=False, sheet_name="Liste des membres")
-                    st.success(f"✅ {prenom} {nom} ajouté avec succès !")
-                else:
-                    st.warning("⚠️ Merci de renseigner au minimum le prénom et le nom.")
-    elif code:
-        st.error("❌ Code d'accès incorrect.")
+                    df = pd.co
