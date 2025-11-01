@@ -78,19 +78,6 @@ st.markdown("""
             color: black;
         }
 
-        /* ======= BOUTONS TABLEAU ======= */
-        [data-testid="stToolbar"] button {
-            background: linear-gradient(45deg, var(--vert-fonce), var(--jaune-mbb)) !important;
-            color: white !important;
-            border-radius: 6px !important;
-            border: none !important;
-        }
-
-        [data-testid="stToolbar"] button:hover {
-            background: linear-gradient(45deg, var(--jaune-mbb), var(--vert-fonce)) !important;
-            color: black !important;
-        }
-
         /* ======= BANNIÈRE ======= */
         .banner {
             background: linear-gradient(90deg, var(--vert-fonce), var(--jaune-mbb));
@@ -104,9 +91,12 @@ st.markdown("""
             box-shadow: 2px 2px 10px rgba(0,0,0,0.3);
         }
 
-        /* ======= SÉPARATEURS ======= */
-        hr, .stDivider {
-            border-top: 2px solid #FDFEFE;
+        /* ======= ALIGNEMENT DU TITRE ET DU BOUTON ======= */
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
         }
     </style>
 """, unsafe_allow_html=True)
@@ -117,9 +107,14 @@ if os.path.exists(VISUEL):
 else:
     st.warning("⚠️ Image du visuel non trouvée.")
 
-st.markdown("<div class='banner'>MALIKA BI ÑU BËGG – Une nouvelle ère s’annonce 🌍</div>", unsafe_allow_html=True)
-st.title("📘 Base de données du Mouvement - MBB")
-st.markdown("<p>Bienvenue dans la base de données des membres de <b>Malika Bi Ñu Bëgg</b>.</p>", unsafe_allow_html=True)
+# === TITRE + BOUTON ALIGNÉS ===
+col1, col2 = st.columns([4, 1])
+with col1:
+    st.markdown("<div class='banner'>MALIKA BI ÑU BËGG – Une nouvelle ère s’annonce 🌍</div>", unsafe_allow_html=True)
+    st.title("📘 Base de données du Mouvement - MBB")
+    st.markdown("<p>Bienvenue dans la base de données des membres de <b>Malika Bi Ñu Bëgg</b>.</p>", unsafe_allow_html=True)
+with col2:
+    afficher_par_quartier = st.button("🏘️ Afficher par quartier")
 
 # === CHARGEMENT DU FICHIER EXCEL ===
 if not os.path.exists(FICHIER_EXCEL):
@@ -127,11 +122,20 @@ if not os.path.exists(FICHIER_EXCEL):
 else:
     df = pd.read_excel(FICHIER_EXCEL, sheet_name="Liste des membres", header=1)
 
-    # 🔹 Ajouter la date du jour dans le titre
+    # === TITRE AVEC DATE ===
     date_du_jour = datetime.now().strftime("%d %B %Y")
-    st.subheader(f"👥 Liste actuelle des membres au {date_du_jour}")
+    st.subheader(f"👥 Liste actuelle des membres à la date du {date_du_jour}")
 
-    st.dataframe(df, use_container_width=True)
+    if afficher_par_quartier:
+        st.markdown("### 🏘️ Membres regroupés par adresse (quartier)")
+        quartiers_uniques = df["Adresse"].dropna().unique()
+        for quartier in sorted(quartiers_uniques):
+            st.markdown(f"#### 📍 {quartier}")
+            membres_quartier = df[df["Adresse"] == quartier][["Prénom", "Nom", "Téléphone", "Profession", "Commission"]]
+            st.dataframe(membres_quartier, use_container_width=True)
+            st.divider()
+    else:
+        st.dataframe(df, use_container_width=True)
 
     st.divider()
 
