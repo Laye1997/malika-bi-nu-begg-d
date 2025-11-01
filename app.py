@@ -159,12 +159,13 @@ else:
             quartiers_uniques = df[adresse_col].dropna().unique()
 
             for quartier in sorted(quartiers_uniques):
-                st.markdown(f"#### 📍 {quartier}")
+                membres_quartier = df[df[adresse_col] == quartier]
+                nb_membres = len(membres_quartier)
+
+                st.markdown(f"#### 📍 {quartier} ({nb_membres} membre{'s' if nb_membres > 1 else ''})")
 
                 colonnes_a_afficher = [c[0] for c in colonnes.values() if c]
-                membres_quartier = df[df[adresse_col] == quartier][colonnes_a_afficher]
-
-                # ✅ Supprimer les doublons de colonnes dans le sous-tableau
+                membres_quartier = membres_quartier[colonnes_a_afficher]
                 membres_quartier = membres_quartier.loc[:, ~membres_quartier.columns.duplicated()]
 
                 st.dataframe(membres_quartier, use_container_width=True)
