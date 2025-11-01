@@ -107,69 +107,72 @@ if os.path.exists(VISUEL):
 else:
     st.warning("⚠️ Image du visuel non trouvée.")
 
-# === TITRE + BOUTON ALIGNÉS ===
-col1, col2 = st.columns([4, 1])
-with col1:
-    st.markdown("<div class='banner'>MALIKA BI ÑU BËGG – Une nouvelle ère s’annonce 🌍</div>", unsafe_allow_html=True)
-    st.title("📘 Base de données du Mouvement - MBB")
-    st.markdown("<p>Bienvenue dans la base de données des membres de <b>Malika Bi Ñu Bëgg</b>.</p>", unsafe_allow_html=True)
-with col2:
-    afficher_par_quartier = st.button("🏘️ Afficher par quartier")
-
 # === CHARGEMENT DU FICHIER EXCEL ===
 if not os.path.exists(FICHIER_EXCEL):
     st.error(f"Le fichier {FICHIER_EXCEL} est introuvable.")
 else:
     df = pd.read_excel(FICHIER_EXCEL, sheet_name="Liste des membres", header=1)
 
+    # === NORMALISER LES NOMS DE COLONNES ===
+    df.columns = (
+        df.columns.str.strip()
+                  .str.lower()
+                  .str.replace("é", "e")
+                  .str.replace("è", "e")
+                  .str.replace("ê", "e")
+                  .str.replace("à", "a")
+                  .str.replace("ç", "c")
+    )
+    df = df.loc[:, ~df.columns.duplicated()]  # supprime les colonnes en double
+
+    # Identifier la colonne "adresse"
+    col_adresse = [c for c in df.columns if "adres" in c]
+    nb_quartiers = len(df[col_adresse[0]].dropna().unique()) if col_adresse else 0
+
+    # === TITRE + BOUTON ALIGNÉS ===
+    col1, col2 = st.columns([4, 1])
+    with col1:
+        st.markdown("<div class='banner'>MALIKA BI ÑU BËGG – Une nouvelle ère s’annonce 🌍</div>", unsafe_allow_html=True)
+        st.title("📘 Base de données du Mouvement - MBB")
+        st.markdown("<p>Bienvenue dans la base de données des membres de <b>Malika Bi Ñu Bëgg</b>.</p>", unsafe_allow_html=True)
+    with col2:
+        afficher_par_quartier = st.button(f"🏘️ Afficher par quartier ({nb_quartiers})")
+
     # === TITRE AVEC DATE ===
     date_du_jour = datetime.now().strftime("%d %B %Y")
     st.subheader(f"👥 Liste actuelle des membres à la date du {date_du_jour}")
 
     # === MODE AFFICHAGE PAR QUARTIER ===
-    if afficher_par_quartier:
+    if afficher_par_quartier and col_adresse:
         st.markdown("### 🏘️ Membres regroupés par adresse (quartier)")
 
-        # ✅ Normaliser les noms de colonnes et supprimer les doublons
-        df.columns = (
-            df.columns.str.strip()
-                      .str.lower()
-                      .str.replace("é", "e")
-                      .str.replace("è", "e")
-                      .str.replace("ê", "e")
-                      .str.replace("à", "a")
-                      .str.replace("ç", "c")
-        )
-        df = df.loc[:, ~df.columns.duplicated()]  # supprime les colonnes en double
-
-        # ✅ Identifier les colonnes
         colonnes = {
             "prenom": [c for c in df.columns if "prenom" in c],
             "nom": [c for c in df.columns if "nom" in c],
-            "adresse": [c for c in df.columns if "adres" in c],
             "telephone": [c for c in df.columns if "tel" in c],
             "profession": [c for c in df.columns if "prof" in c],
             "commission": [c for c in df.columns if "comm" in c],
         }
 
-        if not colonnes["adresse"]:
-            st.error("❌ La colonne 'Adresse' est introuvable dans le fichier Excel.")
-        else:
-            adresse_col = colonnes["adresse"][0]
-            quartiers_uniques = df[adresse_col].dropna().unique()
+        adresse_col = col_adresse[0]
+        quartiers_uniques = df[adresse_col].dropna().unique()
+        total_membres = 0
 
-            for quartier in sorted(quartiers_uniques):
-                membres_quartier = df[df[adresse_col] == quartier]
-                nb_membres = len(membres_quartier)
+        for quartier in sorted(quartiers_uniques):
+            membres_quartier = df[df[adresse_col] == quartier]
+            nb_membres = len(membres_quartier)
+            total_membres += nb_membres
 
-                st.markdown(f"#### 📍 {quartier} ({nb_membres} membre{'s' if nb_membres > 1 else ''})")
+            st.markdown(f"#### 📍 {quartier} ({nb_membres} membre{'s' if nb_membres > 1 else ''})")
 
-                colonnes_a_afficher = [c[0] for c in colonnes.values() if c]
-                membres_quartier = membres_quartier[colonnes_a_afficher]
-                membres_quartier = membres_quartier.loc[:, ~membres_quartier.columns.duplicated()]
+            colonnes_a_afficher = [c[0] for c in colonnes.values() if c]
+            membres_quartier = membres_quartier[colonnes_a_afficher]
+            membres_quartier = membres_quartier.loc[:, ~membres_quartier.columns.duplicated()]
 
-                st.dataframe(membres_quartier, use_container_width=True)
-                st.divider()
+            st.dataframe(membres_quartier, use_container_width=True)
+            st.divider()
+
+        st.markdown(f"### 🔢 Total général : **{total_membres} membres**")
     else:
         st.dataframe(df, use_container_width=True)
 
