@@ -98,6 +98,16 @@ st.markdown("""
             align-items: center;
             margin-bottom: 10px;
         }
+
+        /* ======= SUPPRIMER LA BARRE SUPÉRIEURE STREAMLIT ======= */
+        header[data-testid="stHeader"] {
+            display: none !important;
+        }
+
+        /* Supprimer le menu burger et le footer Streamlit Cloud */
+        #MainMenu, footer {
+            visibility: hidden !important;
+        }
     </style>
 """, unsafe_allow_html=True)
 
