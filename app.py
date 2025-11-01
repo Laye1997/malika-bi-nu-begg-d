@@ -9,16 +9,14 @@ FICHIER_EXCEL = "Liste_Membres.xlsx"
 CODE_SECRET = "MBB2025"
 VISUEL = "561812309_122099008227068424_7173387226638749981_n.jpg"
 
-# === IDENTIFIANTS DE CONNEXION ===
-USERS = {
-    "admin": "mbb2025",
-    "president": "malika2025"
-}
+# === IDENTIFIANTS ===
+USERNAME = "admin"
+PASSWORD = "mbb2025"
 
 # === PARAMÈTRES DE LA PAGE ===
 st.set_page_config(page_title="Base de données MBB", page_icon="📘", layout="wide")
 
-# === STYLE ===
+# === STYLE PERSONNALISÉ ===
 st.markdown("""
     <style>
         :root {
@@ -31,25 +29,7 @@ st.markdown("""
             color: var(--blanc);
             font-family: "Segoe UI", sans-serif;
         }
-        h1, h2, h3 {
-            color: #FFFFFF !important;
-            text-shadow: 1px 1px 2px rgba(0,0,0,0.4);
-        }
-        p, label, span, div {
-            color: #FDFEFE !important;
-        }
-        .stButton>button {
-            background: linear-gradient(45deg, var(--vert-fonce), var(--jaune-mbb));
-            color: white;
-            border-radius: 10px;
-            font-weight: bold;
-            border: none;
-            box-shadow: 1px 1px 4px rgba(0,0,0,0.3);
-        }
-        .stButton>button:hover {
-            background: linear-gradient(45deg, var(--jaune-mbb), var(--vert-fonce));
-            color: black;
-        }
+        h1, h2, h3 { color: #FFFFFF !important; }
         .banner {
             background: linear-gradient(90deg, var(--vert-fonce), var(--jaune-mbb));
             color: white;
@@ -59,11 +39,6 @@ st.markdown("""
             font-weight: bold;
             font-size: 22px;
             margin-bottom: 20px;
-            box-shadow: 2px 2px 10px rgba(0,0,0,0.3);
-        }
-        header[data-testid="stHeader"], #MainMenu, footer {
-            display: none !important;
-            visibility: hidden !important;
         }
     </style>
 """, unsafe_allow_html=True)
@@ -71,45 +46,35 @@ st.markdown("""
 # === PAGE DE CONNEXION ===
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
-if "username" not in st.session_state:
-    st.session_state.username = None
 
 if not st.session_state.authenticated:
-    st.markdown("<div class='banner'>🔐 Accès sécurisé – Base de données MBB</div>", unsafe_allow_html=True)
-    st.title("Connexion requise")
-
-    username_input = st.text_input("👤 Identifiant")
-    password_input = st.text_input("🔑 Mot de passe", type="password")
-
+    st.markdown("<div class='banner'>🔐 Connexion sécurisée - MBB</div>", unsafe_allow_html=True)
+    username = st.text_input("Nom d'utilisateur")
+    password = st.text_input("Mot de passe", type="password")
     if st.button("Se connecter"):
-        if username_input in USERS and USERS[username_input] == password_input:
+        if username == USERNAME and password == PASSWORD:
             st.session_state.authenticated = True
-            st.session_state.username = username_input
-            st.success("✅ Connexion réussie !")
+            st.success("Connexion réussie ✅")
             st.rerun()
         else:
-            st.error("❌ Identifiant ou mot de passe incorrect.")
+            st.error("Nom d'utilisateur ou mot de passe incorrect ❌")
     st.stop()
 
-# === BARRE LATÉRALE ===
-st.sidebar.success(f"Connecté en tant que **{st.session_state.username}**")
-if st.sidebar.button("🔒 Déconnexion"):
-    st.session_state.authenticated = False
-    st.session_state.username = None
-    st.rerun()
+# === SI CONNECTÉ ===
+st.sidebar.success(f"Connecté en tant que **{USERNAME}**")
 
-# === VISUEL DU MOUVEMENT ===
+# === VISUEL ===
 if os.path.exists(VISUEL):
     st.image(VISUEL, use_container_width=True)
+else:
+    st.warning("⚠️ Image du visuel non trouvée.")
 
-# === CHARGEMENT DU FICHIER ===
+# === CHARGEMENT DES DONNÉES ===
 if not os.path.exists(FICHIER_EXCEL):
-    st.error(f"❌ Le fichier {FICHIER_EXCEL} est introuvable.")
+    st.error(f"Le fichier {FICHIER_EXCEL} est introuvable.")
     st.stop()
 
 df = pd.read_excel(FICHIER_EXCEL, sheet_name="Liste des membres", header=1)
-
-# === NORMALISER LES COLONNES ===
 df.columns = (
     df.columns.str.strip()
               .str.lower()
@@ -127,11 +92,12 @@ nb_quartiers = len(df[col_adresse[0]].dropna().unique()) if col_adresse else 0
 tabs = st.tabs([
     "🏠 Accueil",
     f"🏘️ Par Quartier ({nb_quartiers})",
+    "🗳️ Carte électorale de Malika",
     "📝 Compte Rendu",
     "🚫 Membres Non Inscrits"
 ])
 
-# 🏠 ONGLET ACCUEIL
+# === ONGLET ACCUEIL ===
 with tabs[0]:
     st.markdown("<div class='banner'>MALIKA BI ÑU BËGG – Une nouvelle ère s’annonce 🌍</div>", unsafe_allow_html=True)
     st.title("📘 Base de données du Mouvement - MBB")
@@ -142,88 +108,73 @@ with tabs[0]:
     st.dataframe(df, use_container_width=True)
 
     st.divider()
-    st.subheader("➕ Ajouter un nouveau membre")
-
-    code = st.text_input("Entrez le code d'accès pour ajouter un membre :", type="password")
-
-    if code == CODE_SECRET:
-        with st.form("ajout_membre"):
-            col1, col2 = st.columns(2)
-            with col1:
-                prenom = st.text_input("Prénom")
-                nom = st.text_input("Nom")
-                telephone = st.text_input("Téléphone")
-                profession = st.text_input("Profession")
-            with col2:
-                adresse = st.text_input("Adresse (quartier)")
-                commission = st.text_input("Commission")
-                notes = st.text_area("Notes")
-
-            submitted = st.form_submit_button("Ajouter le membre")
-
-            if submitted:
-                if prenom and nom and telephone:
-                    telephone_sans_espaces = str(telephone).replace(" ", "").strip()
-                    col_tel = [c for c in df.columns if "tel" in c]
-                    if col_tel:
-                        numeros_existants = df[col_tel[0]].astype(str).str.replace(" ", "").str.strip()
-                    else:
-                        numeros_existants = pd.Series([])
-
-                    if telephone_sans_espaces in numeros_existants.values:
-                        st.error("❌ Ce numéro de téléphone existe déjà.")
-                    else:
-                        new_row = {
-                            "Prénom": prenom,
-                            "Nom": nom,
-                            "Adresse": adresse,
-                            "Téléphone": telephone,
-                            "Profession": profession,
-                            "Commission": commission,
-                            "Notes": notes
-                        }
-                        df = pd.concat([df, pd.DataFrame([new_row])], ignore_index=True)
-                        df.to_excel(FICHIER_EXCEL, index=False, sheet_name="Liste des membres")
-                        st.success(f"✅ {prenom} {nom} ajouté avec succès !")
-                else:
-                    st.warning("⚠️ Merci de renseigner le prénom, le nom et le numéro de téléphone.")
-    elif code:
-        st.error("❌ Code d'accès incorrect.")
-
-# 🏘️ ONGLET PAR QUARTIER
-with tabs[1]:
+    st.subheader("📊 Répartition des membres par quartier")
     if col_adresse:
-        adresse_col = col_adresse[0]
-        membres_par_quartier = df[adresse_col].value_counts().sort_index()
-
-        st.markdown("### 📊 Répartition des membres par quartier")
-        fig = px.pie(
-            names=membres_par_quartier.index,
-            values=membres_par_quartier.values,
-            color_discrete_sequence=px.colors.sequential.YlGn,
-            title="Répartition des membres par quartier"
-        )
+        membres_par_quartier = df[col_adresse[0]].value_counts().reset_index()
+        membres_par_quartier.columns = ["Quartier", "Nombre de membres"]
+        fig = px.bar(membres_par_quartier, x="Quartier", y="Nombre de membres",
+                     color="Quartier", title="Répartition des membres par quartier")
         st.plotly_chart(fig, use_container_width=True)
 
+# === ONGLET PAR QUARTIER ===
+with tabs[1]:
+    st.markdown("### 🏘️ Membres regroupés par adresse (quartier)")
+    adresse_col = col_adresse[0]
+    quartiers_uniques = df[adresse_col].dropna().unique()
+    total_membres = 0
+
+    for quartier in sorted(quartiers_uniques):
+        membres_quartier = df[df[adresse_col] == quartier]
+        nb_membres = len(membres_quartier)
+        total_membres += nb_membres
+        st.markdown(f"#### 📍 {quartier} ({nb_membres} membre{'s' if nb_membres > 1 else ''})")
+        st.dataframe(membres_quartier, use_container_width=True)
         st.divider()
-        total_membres = 0
+    st.markdown(f"### 🔢 Total général : **{total_membres} membres**")
 
-        for quartier, nb_membres in membres_par_quartier.items():
-            total_membres += nb_membres
-            st.markdown(f"#### 📍 {quartier} ({nb_membres} membre{'s' if nb_membres > 1 else ''})")
-            st.dataframe(df[df[adresse_col] == quartier], use_container_width=True)
-            st.divider()
-
-        st.markdown(f"### 🔢 Total général : **{total_membres} membres**")
-    else:
-        st.error("❌ Colonne 'Adresse' introuvable dans le fichier.")
-
-# 📝 ONGLET COMPTE RENDU
+# === ONGLET CARTE ÉLECTORALE ===
 with tabs[2]:
-    st.markdown("### 📝 Compte Rendu des Réunions")
-    st.info("Cette section permettra bientôt d’ajouter ou de consulter les comptes rendus des réunions du mouvement.")
+    st.markdown("### 🗳️ Carte électorale – Commune de Malika")
+    st.info("Ces informations proviennent du portail officiel : [antifraude.parti-pur.com](https://antifraude.parti-pur.com/commune/SENEGAL-DAKAR-KEUR-MASSAR-MALIKA/carte-eletorale)")
 
-# 🚫 ONGLET MEMBRES NON INSCRITS
+    # --- Tableau général des centres ---
+    data_commune = {
+        "Commune": ["Malika", "Malika", "Malika"],
+        "Centre de vote": [
+            "École Malika Montagne",
+            "École Privée Sanka",
+            "École Seydi Anta Gadiaga"
+        ]
+    }
+    st.dataframe(pd.DataFrame(data_commune), use_container_width=True)
+
+    st.divider()
+
+    # --- École Malika Montagne ---
+    st.markdown("#### 🏫 École Malika Montagne")
+    st.markdown("**Bureaux de vote :** 14")
+    st.write(", ".join([f"Bureau n°{i}" for i in range(1, 15)]))
+
+    # --- École Privée Sanka ---
+    st.divider()
+    st.markdown("#### 🏫 École Privée Sanka")
+    st.markdown("**Bureaux de vote :** 20")
+    st.write(", ".join([f"Bureau n°{i}" for i in range(1, 21)]))
+
+    # --- École Seydi Anta Gadiaga ---
+    st.divider()
+    st.markdown("#### 🏫 École Seydi Anta Gadiaga")
+    st.markdown("**Bureaux de vote :** 18")
+    st.write(", ".join([f"Bureau n°{i}" for i in range(1, 19)]))
+
+    st.success("🗳️ Page d'information sur la carte électorale de la commune de Malika mise à jour.")
+
+# === ONGLET COMPTE RENDU ===
 with tabs[3]:
-    st.markdown("### 🚫 Membres Non Inscrits")
-    st.info("Aucune donnée à afficher pour le moment.")
+    st.markdown("### 📝 Compte Rendu des réunions")
+    st.info("Cette page présentera prochainement les comptes rendus officiels des réunions du mouvement MBB.")
+
+# === ONGLET MEMBRES NON INSCRITS ===
+with tabs[4]:
+    st.markdown("### 🚫 Membres non inscrits")
+    st.warning("Aucune donnée pour le moment. Cette section affichera les membres non encore enregistrés.")
