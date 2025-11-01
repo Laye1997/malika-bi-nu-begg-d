@@ -124,7 +124,12 @@ col_adresse = [c for c in df.columns if "adres" in c]
 nb_quartiers = len(df[col_adresse[0]].dropna().unique()) if col_adresse else 0
 
 # === ONGLET DE NAVIGATION ===
-tabs = st.tabs(["🏠 Accueil", f"🏘️ Par Quartier ({nb_quartiers})", "🚫 Membres Non Inscrits"])
+tabs = st.tabs([
+    "🏠 Accueil",
+    f"🏘️ Par Quartier ({nb_quartiers})",
+    "📝 Compte Rendu",
+    "🚫 Membres Non Inscrits"
+])
 
 # 🏠 ONGLET ACCUEIL
 with tabs[0]:
@@ -213,7 +218,12 @@ with tabs[1]:
     else:
         st.error("❌ Colonne 'Adresse' introuvable dans le fichier.")
 
-# 🚫 ONGLET MEMBRES NON INSCRITS
+# 📝 ONGLET COMPTE RENDU
 with tabs[2]:
+    st.markdown("### 📝 Compte Rendu des Réunions")
+    st.info("Cette section permettra bientôt d’ajouter ou de consulter les comptes rendus des réunions du mouvement.")
+
+# 🚫 ONGLET MEMBRES NON INSCRITS
+with tabs[3]:
     st.markdown("### 🚫 Membres Non Inscrits")
     st.info("Aucune donnée à afficher pour le moment.")
