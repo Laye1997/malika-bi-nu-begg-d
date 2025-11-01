@@ -130,7 +130,7 @@ else:
     if afficher_par_quartier:
         st.markdown("### 🏘️ Membres regroupés par adresse (quartier)")
 
-        # ✅ Normaliser les noms de colonnes
+        # ✅ Normaliser les noms de colonnes et supprimer les doublons
         df.columns = (
             df.columns.str.strip()
                       .str.lower()
@@ -140,6 +140,7 @@ else:
                       .str.replace("à", "a")
                       .str.replace("ç", "c")
         )
+        df = df.loc[:, ~df.columns.duplicated()]  # supprime les colonnes en double
 
         # ✅ Identifier les colonnes
         colonnes = {
@@ -162,6 +163,9 @@ else:
 
                 colonnes_a_afficher = [c[0] for c in colonnes.values() if c]
                 membres_quartier = df[df[adresse_col] == quartier][colonnes_a_afficher]
+
+                # ✅ Supprimer les doublons de colonnes dans le sous-tableau
+                membres_quartier = membres_quartier.loc[:, ~membres_quartier.columns.duplicated()]
 
                 st.dataframe(membres_quartier, use_container_width=True)
                 st.divider()
@@ -192,8 +196,13 @@ else:
 
             if submitted:
                 if prenom and nom and telephone:
+                    # ✅ Contrôle des doublons téléphone
                     telephone_sans_espaces = str(telephone).replace(" ", "").strip()
-                    numeros_existants = df["telephone"].astype(str).str.replace(" ", "").str.strip() if "telephone" in df.columns else []
+                    col_tel = [c for c in df.columns if "tel" in c]
+                    if col_tel:
+                        numeros_existants = df[col_tel[0]].astype(str).str.replace(" ", "").str.strip()
+                    else:
+                        numeros_existants = pd.Series([])
 
                     if telephone_sans_espaces in numeros_existants.values:
                         st.error("❌ Ce numéro de téléphone est déjà enregistré dans la base de données.")
