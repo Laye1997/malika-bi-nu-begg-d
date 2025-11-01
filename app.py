@@ -15,7 +15,7 @@ st.set_page_config(
 )
 
 # === STYLE CSS PERSONNALISÉ ===
-st.markdownst.markdown("""
+st.markdown("""
     <style>
         /* ======= COULEURS DU MOUVEMENT ======= */
         :root {
@@ -48,14 +48,14 @@ st.markdownst.markdown("""
             border-radius: 10px;
         }
 
-        /* ======= Lignes survolées ======= */
+        /* 🔥 Lignes survolées (hover) */
         [data-testid="stDataFrame"] table tbody tr:hover {
             background-color: var(--vert-clair) !important;
             color: var(--texte-fonce) !important;
             cursor: pointer;
         }
 
-        /* ======= BARRE DE RECHERCHE & BOUTONS TABLEAU ======= */
+        /* ======= BARRE DE RECHERCHE ET BOUTONS DU TABLEAU ======= */
         [data-testid="stDataFrame"] input[type="text"] {
             background-color: #FFFFFF !important;
             color: var(--texte-fonce) !important;
@@ -109,7 +109,6 @@ st.markdownst.markdown("""
         }
     </style>
 """, unsafe_allow_html=True)
-
 
 # === ENTÊTE AVEC VISUEL ===
 if os.path.exists(VISUEL):
@@ -174,4 +173,3 @@ else:
                     st.warning("⚠️ Merci de renseigner au minimum le prénom et le nom.")
     elif code:
         st.error("❌ Code d'accès incorrect.")
-
