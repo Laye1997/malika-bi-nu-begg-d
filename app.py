@@ -20,7 +20,7 @@ USERS = {
 # === PARAMÈTRES DE LA PAGE ===
 st.set_page_config(page_title="Base de données MBB", page_icon="📘", layout="wide")
 
-# === STYLE GÉNÉRAL ===
+# === STYLE GLOBAL (responsive + mobile friendly) ===
 st.markdown("""
     <style>
         :root {
@@ -39,19 +39,15 @@ st.markdown("""
             color: #FFFFFF !important;
         }
 
-        p, label, span, div {
-            color: #FDFEFE !important;
-        }
-
         .banner {
             background: linear-gradient(90deg, var(--vert-fonce), var(--jaune-mbb));
             color: white;
-            padding: 15px;
+            padding: 12px;
             border-radius: 10px;
             text-align: center;
             font-weight: bold;
-            font-size: 22px;
-            margin-bottom: 20px;
+            font-size: 20px;
+            margin-bottom: 15px;
             box-shadow: 2px 2px 10px rgba(0,0,0,0.3);
         }
 
@@ -61,6 +57,7 @@ st.markdown("""
             border-radius: 10px;
             font-weight: bold;
             border: none;
+            width: 100%;
             box-shadow: 1px 1px 4px rgba(0,0,0,0.3);
         }
 
@@ -71,7 +68,12 @@ st.markdown("""
 
         header[data-testid="stHeader"], #MainMenu, footer {
             display: none !important;
-            visibility: hidden !important;
+        }
+
+        @media (max-width: 768px) {
+            .stApp {
+                font-size: 15px !important;
+            }
         }
     </style>
 """, unsafe_allow_html=True)
@@ -106,11 +108,11 @@ if st.sidebar.button("🔒 Déconnexion"):
     st.session_state.username = None
     st.rerun()
 
-# === VISUEL DU MOUVEMENT ===
+# === VISUEL ===
 if os.path.exists(VISUEL):
     st.image(VISUEL, use_container_width=True)
 
-# === CHARGEMENT DU FICHIER ===
+# === CHARGEMENT DU FICHIER EXCEL ===
 if not os.path.exists(FICHIER_EXCEL):
     st.error(f"❌ Le fichier {FICHIER_EXCEL} est introuvable.")
     st.stop()
@@ -142,7 +144,6 @@ tabs = st.tabs([
 with tabs[0]:
     st.markdown("<div class='banner'>MALIKA BI ÑU BËGG – Une nouvelle ère s’annonce 🌍</div>", unsafe_allow_html=True)
     st.title("📘 Base de données du Mouvement - MBB")
-
     date_du_jour = datetime.now().strftime("%d %B %Y")
     st.subheader(f"👥 Liste actuelle des membres à la date du {date_du_jour}")
     st.dataframe(df, use_container_width=True)
@@ -179,7 +180,7 @@ with tabs[2]:
         "Longitude": [-17.3085, -17.3120, -17.3048]
     })
 
-    # === Graphique ===
+    # === Graphique interactif ===
     st.markdown("#### 📊 Répartition des bureaux de vote par centre")
     fig = px.bar(
         data_centres,
@@ -190,7 +191,11 @@ with tabs[2]:
         color_discrete_sequence=["#145A32", "#2ECC71", "#F4D03F"],
         title="Nombre de bureaux de vote par centre – Commune de Malika"
     )
-    fig.update_traces(textposition="outside")
+    fig.update_traces(
+        textposition="outside",
+        textfont=dict(color="white", size=16),
+        cliponaxis=False
+    )
     fig.update_layout(
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)",
@@ -216,33 +221,24 @@ with tabs[2]:
     st_folium(m, width=800, height=500)
     st.divider()
 
-    # === Cartes visuelles ===
+    # === Cartes visuelles stylisées ===
     st.markdown("#### 🏫 Détails des centres de vote")
     col1, col2, col3 = st.columns(3)
-    with col1:
-        st.markdown("""
-        <div style='background:linear-gradient(135deg,#145A32,#1E8449);padding:15px;border-radius:15px;color:white;text-align:center;'>
-            <h4>🏫 École Malika Montagne</h4>
-            <p><b>14</b> bureaux de vote</p>
-            <p>Bureaux : 1 → 14</p>
-        </div>
-        """, unsafe_allow_html=True)
-    with col2:
-        st.markdown("""
-        <div style='background:linear-gradient(135deg,#27AE60,#F1C40F);padding:15px;border-radius:15px;color:white;text-align:center;'>
-            <h4>🏫 École Privée Sanka</h4>
-            <p><b>20</b> bureaux de vote</p>
-            <p>Bureaux : 1 → 20</p>
-        </div>
-        """, unsafe_allow_html=True)
-    with col3:
-        st.markdown("""
-        <div style='background:linear-gradient(135deg,#F4D03F,#145A32);padding:15px;border-radius:15px;color:white;text-align:center;'>
-            <h4>🏫 École Seydi Anta Gadiaga</h4>
-            <p><b>18</b> bureaux de vote</p>
-            <p>Bureaux : 1 → 18</p>
-        </div>
-        """, unsafe_allow_html=True)
+    for i, (titre, nb, couleur1, couleur2, max_bv) in enumerate([
+        ("École Malika Montagne", 14, "#145A32", "#1E8449", 14),
+        ("École Privée Sanka", 20, "#27AE60", "#F1C40F", 20),
+        ("École Seydi Anta Gadiaga", 18, "#F4D03F", "#145A32", 18)
+    ]):
+        with [col1, col2, col3][i]:
+            st.markdown(f"""
+            <div style='background:linear-gradient(135deg,{couleur1},{couleur2});
+                        padding:15px;border-radius:15px;color:white;text-align:center;
+                        box-shadow:2px 2px 8px rgba(0,0,0,0.3);'>
+                <h4>🏫 {titre}</h4>
+                <p><b>{nb}</b> bureaux de vote</p>
+                <p>Bureaux : 1 → {max_bv}</p>
+            </div>
+            """, unsafe_allow_html=True)
 
     st.success("🗳️ Visualisation complète et interactive de la carte électorale de Malika.")
 
