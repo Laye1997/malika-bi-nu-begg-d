@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import os
 from datetime import datetime
+import matplotlib.pyplot as plt
 
 # === CONFIGURATION ===
 FICHIER_EXCEL = "Liste_Membres.xlsx"
@@ -11,7 +12,7 @@ VISUEL = "561812309_122099008227068424_7173387226638749981_n.jpg"
 # === PARAMÈTRES DE LA PAGE ===
 st.set_page_config(page_title="Base de données MBB", page_icon="📘", layout="wide")
 
-# === STYLE PERSONNALISÉ AUX COULEURS DU VISUEL ===
+# === STYLE PERSONNALISÉ ===
 st.markdown("""
     <style>
         :root {
@@ -74,7 +75,6 @@ st.markdown("""
             box-shadow: 2px 2px 10px rgba(0,0,0,0.3);
         }
 
-        /* Supprimer la barre et le menu Streamlit */
         header[data-testid="stHeader"], #MainMenu, footer {
             display: none !important;
             visibility: hidden !important;
@@ -88,7 +88,7 @@ if os.path.exists(VISUEL):
 else:
     st.warning("⚠️ Image du visuel non trouvée.")
 
-# === CHARGEMENT DU FICHIER EXCEL ===
+# === CHARGEMENT DU FICHIER ===
 if not os.path.exists(FICHIER_EXCEL):
     st.error(f"❌ Le fichier {FICHIER_EXCEL} est introuvable.")
     st.stop()
@@ -113,7 +113,7 @@ nb_quartiers = len(df[col_adresse[0]].dropna().unique()) if col_adresse else 0
 # === ONGLET DE NAVIGATION ===
 tabs = st.tabs(["🏠 Accueil", f"🏘️ Afficher par Quartier ({nb_quartiers})", "🚫 Membres Non Inscrits"])
 
-# ------------------------- ONGLET ACCUEIL -------------------------
+# ------------------------- 🏠 ONGLET ACCUEIL -------------------------
 with tabs[0]:
     st.markdown("<div class='banner'>MALIKA BI ÑU BËGG – Une nouvelle ère s’annonce 🌍</div>", unsafe_allow_html=True)
     st.title("📘 Base de données du Mouvement - MBB")
@@ -172,7 +172,7 @@ with tabs[0]:
     elif code:
         st.error("❌ Code d'accès incorrect.")
 
-# ------------------------- ONGLET AFFICHER PAR QUARTIER -------------------------
+# ------------------------- 🏘️ ONGLET AFFICHER PAR QUARTIER -------------------------
 with tabs[1]:
     st.markdown("### 🏘️ Membres regroupés par adresse (quartier)")
     if not col_adresse:
@@ -182,6 +182,20 @@ with tabs[1]:
         quartiers_uniques = df[adresse_col].dropna().unique()
         total_membres = 0
 
+        # --- Calcul des membres par quartier pour le graphique ---
+        membres_par_quartier = df[adresse_col].value_counts().sort_index()
+
+        # --- Afficher le graphique ---
+        st.markdown("#### 📊 Répartition des membres par quartier")
+        fig, ax = plt.subplots()
+        colors = plt.cm.YlGn([i / len(membres_par_quartier) for i in range(len(membres_par_quartier))])
+        ax.pie(membres_par_quartier, labels=membres_par_quartier.index, autopct='%1.1f%%', startangle=90, colors=colors)
+        ax.axis('equal')
+        st.pyplot(fig)
+
+        st.divider()
+
+        # --- Tableau par quartier ---
         for quartier in sorted(quartiers_uniques):
             membres_quartier = df[df[adresse_col] == quartier]
             nb_membres = len(membres_quartier)
@@ -194,7 +208,7 @@ with tabs[1]:
 
         st.markdown(f"### 🔢 Total général : **{total_membres} membres**")
 
-# ------------------------- ONGLET MEMBRES NON INSCRITS -------------------------
+# ------------------------- 🚫 ONGLET MEMBRES NON INSCRITS -------------------------
 with tabs[2]:
     st.markdown("### 🚫 Membres Non Inscrits")
     st.info("Aucune donnée à afficher pour le moment. Cette section sera développée ultérieurement.")
