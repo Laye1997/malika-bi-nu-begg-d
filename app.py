@@ -16,7 +16,6 @@ st.markdown("""
     <style>
         :root {
             --vert-fonce: #145A32;
-            --vert-clair: #7DCEA0;
             --jaune-mbb: #F4D03F;
             --blanc: #FFFFFF;
         }
@@ -36,17 +35,11 @@ st.markdown("""
             color: #FDFEFE !important;
         }
 
-        /* ======= TABLEAU ======= */
         .stDataFrame {
             border: 2px solid var(--blanc);
             border-radius: 12px;
             background-color: rgba(255, 255, 255, 0.95);
             color: black !important;
-        }
-
-        [data-testid="stDataFrame"] table {
-            color: black !important;
-            background-color: white !important;
         }
 
         [data-testid="stDataFrame"] table tbody tr:hover {
@@ -55,15 +48,6 @@ st.markdown("""
             cursor: pointer;
         }
 
-        /* ======= CHAMPS DE FORMULAIRE ======= */
-        input, textarea {
-            border-radius: 8px !important;
-            border: 1px solid #ccc !important;
-            color: #000000 !important;
-            background-color: #FFFFFF !important;
-        }
-
-        /* ======= BOUTONS ======= */
         .stButton>button {
             background: linear-gradient(45deg, var(--vert-fonce), var(--jaune-mbb));
             color: white;
@@ -78,7 +62,6 @@ st.markdown("""
             color: black;
         }
 
-        /* ======= BANNIÈRE ======= */
         .banner {
             background: linear-gradient(90deg, var(--vert-fonce), var(--jaune-mbb));
             color: white;
@@ -91,21 +74,9 @@ st.markdown("""
             box-shadow: 2px 2px 10px rgba(0,0,0,0.3);
         }
 
-        /* ======= ALIGNEMENT DU TITRE ET DU BOUTON ======= */
-        .header-container {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-
-        /* ======= SUPPRIMER LA BARRE SUPÉRIEURE STREAMLIT ======= */
-        header[data-testid="stHeader"] {
+        /* Supprimer la barre et le menu Streamlit */
+        header[data-testid="stHeader"], #MainMenu, footer {
             display: none !important;
-        }
-
-        /* Supprimer le menu burger et le footer Streamlit Cloud */
-        #MainMenu, footer {
             visibility: hidden !important;
         }
     </style>
@@ -119,76 +90,40 @@ else:
 
 # === CHARGEMENT DU FICHIER EXCEL ===
 if not os.path.exists(FICHIER_EXCEL):
-    st.error(f"Le fichier {FICHIER_EXCEL} est introuvable.")
-else:
-    df = pd.read_excel(FICHIER_EXCEL, sheet_name="Liste des membres", header=1)
+    st.error(f"❌ Le fichier {FICHIER_EXCEL} est introuvable.")
+    st.stop()
 
-    # === NORMALISER LES NOMS DE COLONNES ===
-    df.columns = (
-        df.columns.str.strip()
-                  .str.lower()
-                  .str.replace("é", "e")
-                  .str.replace("è", "e")
-                  .str.replace("ê", "e")
-                  .str.replace("à", "a")
-                  .str.replace("ç", "c")
-    )
-    df = df.loc[:, ~df.columns.duplicated()]  # supprime les colonnes en double
+df = pd.read_excel(FICHIER_EXCEL, sheet_name="Liste des membres", header=1)
 
-    # Identifier la colonne "adresse"
-    col_adresse = [c for c in df.columns if "adres" in c]
-    nb_quartiers = len(df[col_adresse[0]].dropna().unique()) if col_adresse else 0
+# === NORMALISER LES NOMS DE COLONNES ===
+df.columns = (
+    df.columns.str.strip()
+              .str.lower()
+              .str.replace("é", "e")
+              .str.replace("è", "e")
+              .str.replace("ê", "e")
+              .str.replace("à", "a")
+              .str.replace("ç", "c")
+)
+df = df.loc[:, ~df.columns.duplicated()]  # supprime les colonnes en double
 
-    # === TITRE + BOUTON ALIGNÉS ===
-    col1, col2 = st.columns([4, 1])
-    with col1:
-        st.markdown("<div class='banner'>MALIKA BI ÑU BËGG – Une nouvelle ère s’annonce 🌍</div>", unsafe_allow_html=True)
-        st.title("📘 Base de données du Mouvement - MBB")
-        st.markdown("<p>Bienvenue dans la base de données des membres de <b>Malika Bi Ñu Bëgg</b>.</p>", unsafe_allow_html=True)
-    with col2:
-        afficher_par_quartier = st.button(f"🏘️ Afficher par quartier ({nb_quartiers})")
+col_adresse = [c for c in df.columns if "adres" in c]
+nb_quartiers = len(df[col_adresse[0]].dropna().unique()) if col_adresse else 0
 
-    # === TITRE AVEC DATE ===
+# === ONGLET DE NAVIGATION ===
+tabs = st.tabs(["🏠 Accueil", f"🏘️ Afficher par Quartier ({nb_quartiers})", "🚫 Membres Non Inscrits"])
+
+# ------------------------- ONGLET ACCUEIL -------------------------
+with tabs[0]:
+    st.markdown("<div class='banner'>MALIKA BI ÑU BËGG – Une nouvelle ère s’annonce 🌍</div>", unsafe_allow_html=True)
+    st.title("📘 Base de données du Mouvement - MBB")
+    st.markdown("<p>Bienvenue dans la base de données des membres de <b>Malika Bi Ñu Bëgg</b>.</p>", unsafe_allow_html=True)
+
     date_du_jour = datetime.now().strftime("%d %B %Y")
     st.subheader(f"👥 Liste actuelle des membres à la date du {date_du_jour}")
-
-    # === MODE AFFICHAGE PAR QUARTIER ===
-    if afficher_par_quartier and col_adresse:
-        st.markdown("### 🏘️ Membres regroupés par adresse (quartier)")
-
-        colonnes = {
-            "prenom": [c for c in df.columns if "prenom" in c],
-            "nom": [c for c in df.columns if "nom" in c],
-            "telephone": [c for c in df.columns if "tel" in c],
-            "profession": [c for c in df.columns if "prof" in c],
-            "commission": [c for c in df.columns if "comm" in c],
-        }
-
-        adresse_col = col_adresse[0]
-        quartiers_uniques = df[adresse_col].dropna().unique()
-        total_membres = 0
-
-        for quartier in sorted(quartiers_uniques):
-            membres_quartier = df[df[adresse_col] == quartier]
-            nb_membres = len(membres_quartier)
-            total_membres += nb_membres
-
-            st.markdown(f"#### 📍 {quartier} ({nb_membres} membre{'s' if nb_membres > 1 else ''})")
-
-            colonnes_a_afficher = [c[0] for c in colonnes.values() if c]
-            membres_quartier = membres_quartier[colonnes_a_afficher]
-            membres_quartier = membres_quartier.loc[:, ~membres_quartier.columns.duplicated()]
-
-            st.dataframe(membres_quartier, use_container_width=True)
-            st.divider()
-
-        st.markdown(f"### 🔢 Total général : **{total_membres} membres**")
-    else:
-        st.dataframe(df, use_container_width=True)
+    st.dataframe(df, use_container_width=True)
 
     st.divider()
-
-    # === FORMULAIRE D’AJOUT ===
     st.subheader("➕ Ajouter un nouveau membre")
 
     code = st.text_input("Entrez le code d'accès pour ajouter un membre :", type="password")
@@ -210,7 +145,6 @@ else:
 
             if submitted:
                 if prenom and nom and telephone:
-                    # ✅ Contrôle des doublons téléphone
                     telephone_sans_espaces = str(telephone).replace(" ", "").strip()
                     col_tel = [c for c in df.columns if "tel" in c]
                     if col_tel:
@@ -237,3 +171,30 @@ else:
                     st.warning("⚠️ Merci de renseigner le prénom, le nom et le numéro de téléphone.")
     elif code:
         st.error("❌ Code d'accès incorrect.")
+
+# ------------------------- ONGLET AFFICHER PAR QUARTIER -------------------------
+with tabs[1]:
+    st.markdown("### 🏘️ Membres regroupés par adresse (quartier)")
+    if not col_adresse:
+        st.error("❌ La colonne 'Adresse' est introuvable dans le fichier Excel.")
+    else:
+        adresse_col = col_adresse[0]
+        quartiers_uniques = df[adresse_col].dropna().unique()
+        total_membres = 0
+
+        for quartier in sorted(quartiers_uniques):
+            membres_quartier = df[df[adresse_col] == quartier]
+            nb_membres = len(membres_quartier)
+            total_membres += nb_membres
+
+            st.markdown(f"#### 📍 {quartier} ({nb_membres} membre{'s' if nb_membres > 1 else ''})")
+            colonnes_afficher = [c for c in df.columns if c not in ["notes"]]
+            st.dataframe(membres_quartier[colonnes_afficher], use_container_width=True)
+            st.divider()
+
+        st.markdown(f"### 🔢 Total général : **{total_membres} membres**")
+
+# ------------------------- ONGLET MEMBRES NON INSCRITS -------------------------
+with tabs[2]:
+    st.markdown("### 🚫 Membres Non Inscrits")
+    st.info("Aucune donnée à afficher pour le moment. Cette section sera développée ultérieurement.")
