@@ -11,14 +11,14 @@ VISUEL = "561812309_122099008227068424_7173387226638749981_n.jpg"
 
 # === IDENTIFIANTS DE CONNEXION ===
 USERS = {
-    "admin": "mbb2025",     # 🔑 identifiant : mot de passe
+    "admin": "mbb2025",
     "president": "malika2025"
 }
 
 # === PARAMÈTRES DE LA PAGE ===
 st.set_page_config(page_title="Base de données MBB", page_icon="📘", layout="wide")
 
-# === STYLE GÉNÉRAL ===
+# === STYLE ===
 st.markdown("""
     <style>
         :root {
@@ -26,22 +26,18 @@ st.markdown("""
             --jaune-mbb: #F4D03F;
             --blanc: #FFFFFF;
         }
-
         .stApp {
             background: linear-gradient(120deg, var(--vert-fonce), var(--jaune-mbb));
             color: var(--blanc);
             font-family: "Segoe UI", sans-serif;
         }
-
         h1, h2, h3 {
             color: #FFFFFF !important;
             text-shadow: 1px 1px 2px rgba(0,0,0,0.4);
         }
-
         p, label, span, div {
             color: #FDFEFE !important;
         }
-
         .stButton>button {
             background: linear-gradient(45deg, var(--vert-fonce), var(--jaune-mbb));
             color: white;
@@ -50,12 +46,10 @@ st.markdown("""
             border: none;
             box-shadow: 1px 1px 4px rgba(0,0,0,0.3);
         }
-
         .stButton>button:hover {
             background: linear-gradient(45deg, var(--jaune-mbb), var(--vert-fonce));
             color: black;
         }
-
         .banner {
             background: linear-gradient(90deg, var(--vert-fonce), var(--jaune-mbb));
             color: white;
@@ -67,7 +61,6 @@ st.markdown("""
             margin-bottom: 20px;
             box-shadow: 2px 2px 10px rgba(0,0,0,0.3);
         }
-
         header[data-testid="stHeader"], #MainMenu, footer {
             display: none !important;
             visibility: hidden !important;
@@ -78,34 +71,38 @@ st.markdown("""
 # === PAGE DE CONNEXION ===
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
+if "username" not in st.session_state:
+    st.session_state.username = None
 
 if not st.session_state.authenticated:
     st.markdown("<div class='banner'>🔐 Accès sécurisé – Base de données MBB</div>", unsafe_allow_html=True)
     st.title("Connexion requise")
 
-    username = st.text_input("👤 Identifiant")
-    password = st.text_input("🔑 Mot de passe", type="password")
+    username_input = st.text_input("👤 Identifiant")
+    password_input = st.text_input("🔑 Mot de passe", type="password")
 
     if st.button("Se connecter"):
-        if username in USERS and USERS[username] == password:
+        if username_input in USERS and USERS[username_input] == password_input:
             st.session_state.authenticated = True
+            st.session_state.username = username_input
             st.success("✅ Connexion réussie !")
             st.rerun()
         else:
             st.error("❌ Identifiant ou mot de passe incorrect.")
     st.stop()
 
-# === SI CONNECTÉ : PAGE PRINCIPALE ===
-st.sidebar.success(f"Connecté en tant que **{username}**")
+# === BARRE LATÉRALE ===
+st.sidebar.success(f"Connecté en tant que **{st.session_state.username}**")
 if st.sidebar.button("🔒 Déconnexion"):
     st.session_state.authenticated = False
+    st.session_state.username = None
     st.rerun()
 
 # === VISUEL DU MOUVEMENT ===
 if os.path.exists(VISUEL):
     st.image(VISUEL, use_container_width=True)
 
-# === CHARGEMENT DU FICHIER EXCEL ===
+# === CHARGEMENT DU FICHIER ===
 if not os.path.exists(FICHIER_EXCEL):
     st.error(f"❌ Le fichier {FICHIER_EXCEL} est introuvable.")
     st.stop()
