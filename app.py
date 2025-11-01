@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import os
+from datetime import datetime
 
 # === CONFIGURATION ===
 FICHIER_EXCEL = "Liste_Membres.xlsx"
@@ -126,7 +127,10 @@ if not os.path.exists(FICHIER_EXCEL):
 else:
     df = pd.read_excel(FICHIER_EXCEL, sheet_name="Liste des membres", header=1)
 
-    st.subheader("👥 Liste actuelle des membres")
+    # 🔹 Ajouter la date du jour dans le titre
+    date_du_jour = datetime.now().strftime("%d %B %Y")
+    st.subheader(f"👥 Liste actuelle des membres au {date_du_jour}")
+
     st.dataframe(df, use_container_width=True)
 
     st.divider()
