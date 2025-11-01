@@ -14,8 +14,7 @@ st.markdown("Bienvenue dans la base de données des membres de **Malika Bi Ñu B
 if not os.path.exists(FICHIER_EXCEL):
     st.error(f"Le fichier {FICHIER_EXCEL} est introuvable.")
 else:
-    # Charger les membres existants
-    # Charger les membres existants
+    # Charger les membres existants (ligne 0 comme en-tête)
     df = pd.read_excel(FICHIER_EXCEL, sheet_name="Liste des membres", header=0)
 
     st.subheader("👥 Liste actuelle des membres")
@@ -60,4 +59,3 @@ else:
                     st.warning("⚠️ Merci de renseigner au minimum le prénom et le nom.")
     elif code:
         st.error("❌ Code d'accès incorrect.")
-
