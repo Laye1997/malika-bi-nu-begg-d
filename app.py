@@ -3,168 +3,166 @@ import pandas as pd
 import plotly.express as px
 import gspread
 from google.oauth2.service_account import Credentials
-from datetime import datetime
 
-# ======================================================
-# 🔐 CONFIGURATION GOOGLE SHEETS
-# ======================================================
+# ============================================================
+# 🔐 CONFIGURATION GOOGLE SHEETS VIA SECRETS STREAMLIT
+# ============================================================
 
 SCOPE = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive"
 ]
 
-# Charger credentials depuis Streamlit secrets
-CREDS = Credentials.from_service_account_info(
-    st.secrets["google_service_account"],
-    scopes=SCOPE
-)
+# Charger les credentials depuis st.secrets
+creds_info = st.secrets["google_service_account"]
 
-CLIENT = gspread.authorize(CREDS)
+creds = Credentials.from_service_account_info(creds_info, scopes=SCOPE)
+client = gspread.authorize(creds)
 
-# ID Google Sheet depuis secrets
+# Google Sheet ID
 SHEET_ID = st.secrets["SHEET_ID"]
 
-# Chargement du fichier Google Sheets
-sheet = CLIENT.open_by_key(SHEET_ID)
+# Ouvrir le sheet
+sheet = client.open_by_key(SHEET_ID)
 worksheet = sheet.worksheet("Liste des membres")
 
-
-# ===============================
-# 🔍 Fonctions utilitaires
-# ===============================
+# ============================================================
+# 📥 FONCTIONS DATA
+# ============================================================
 
 def load_data():
-    """Charge toutes les lignes du Google Sheet."""
+    """Lire toute la base depuis Google Sheets"""
     data = worksheet.get_all_records()
     df = pd.DataFrame(data)
     return df
 
-
 def add_member(prenom, nom, adresse, telephone, cni):
-    """Ajoute une ligne dans Google Sheets."""
+    """Ajouter un membre au Google Sheet"""
     worksheet.append_row([prenom, nom, adresse, telephone, cni])
 
-
-# ======================================================
-# 🔐 SECTION ADMIN
-# ======================================================
+# ============================================================
+# 🔐 INFO ADMIN
+# ============================================================
 
 USERS = {"admin": "mbb2025"}
-
-st.set_page_config(page_title="Base de données MBB", page_icon="📘", layout="wide")
-
-st.markdown("""
-    <style>
-        :root { --vert-fonce:#145A32; --jaune-mbb:#F4D03F; }
-        .stApp {
-            background: linear-gradient(120deg, var(--vert-fonce), var(--jaune-mbb));
-            color: white; font-family: "Segoe UI";
-        }
-        h1,h2,h3 { color: white !important; }
-        .banner {
-            background: linear-gradient(90deg, var(--vert-fonce), var(--jaune-mbb));
-            padding:12px; text-align:center;
-            border-radius:10px; font-weight:bold;
-            font-size:22px; margin-bottom:20px;
-        }
-        .stButton>button {
-            background: linear-gradient(45deg, var(--vert-fonce), var(--jaune-mbb));
-            color:white; border-radius:10px; border:none; width:100%;
-        }
-        .stButton>button:hover { opacity:0.9; }
-    </style>
-""", unsafe_allow_html=True)
-
-
-# ======================================================
-# SESSION
-# ======================================================
 
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 
+if "username" not in st.session_state:
+    st.session_state.username = None
 
-# ======================================================
-# 🏠 PAGE D’ACCUEIL : INSCRIPTION + ADMIN LOGIN
-# ======================================================
+# ============================================================
+# 🎨 DESIGN GÉNÉRAL
+# ============================================================
 
-st.markdown("<div class='banner'>Espace membres – BD2027 MBB</div>", unsafe_allow_html=True)
-st.title("Plateforme officielle d'inscription MBB")
+st.set_page_config(page_title="Base MBB", page_icon="📘", layout="wide")
 
-col1, col2 = st.columns(2)
+st.markdown("""
+    <style>
+        :root { --vert-fonce:#145A32; --jaune-mbb:#F4D03F; --blanc:#FFFFFF; }
+        .stApp {
+            background: linear-gradient(120deg, var(--vert-fonce), var(--jaune-mbb));
+            color: var(--blanc);
+            font-family: "Segoe UI", sans-serif;
+        }
+        h1,h2,h3 { color:#FFFFFF !important; }
+        .banner {
+            background: linear-gradient(90deg, var(--vert-fonce), var(--jaune-mbb));
+            color:white; padding:12px; border-radius:10px;
+            text-align:center; font-weight:bold; font-size:20px;
+            margin-bottom:15px;
+            box-shadow:2px 2px 10px rgba(0,0,0,0.3);
+        }
+        .stButton>button {
+            background: linear-gradient(45deg, var(--vert-fonce), var(--jaune-mbb));
+            color:white; border-radius:10px; font-weight:bold;
+            border:none; width:100%;
+            box-shadow:1px 1px 4px rgba(0,0,0,0.3);
+        }
+        .stButton>button:hover {
+            background: linear-gradient(45deg, var(--jaune-mbb), var(--vert-fonce));
+            color:black;
+        }
+        header[data-testid="stHeader"], #MainMenu, footer { display:none !important; }
+    </style>
+""", unsafe_allow_html=True)
 
-# ======================================================
-# 📝 FORMULAIRE D’INSCRIPTION
-# ======================================================
+# ============================================================
+# 🏠 PAGE D’ACCUEIL : INSCRIPTION + LOGIN ADMIN
+# ============================================================
 
-with col1:
+st.markdown("<div class='banner'>Plateforme Officielle — BD2027 MBB</div>", unsafe_allow_html=True)
+st.title("Bienvenue sur la plateforme d'inscription")
+
+col_insc, col_conn = st.columns(2)
+
+# ------------------------------------------------------------
+# 📝 INSCRIPTION MEMBRE
+# ------------------------------------------------------------
+with col_insc:
     st.subheader("📝 Inscription comme membre")
 
     prenom = st.text_input("Prénom")
     nom = st.text_input("Nom")
     telephone = st.text_input("Numéro de téléphone")
-    adresse = st.text_input("Quartier (Adresse)")
+    adresse = st.text_input("Adresse (quartier)")
     cni = st.text_input("Numéro de CNI (optionnel)")
 
     if st.button("Valider mon inscription"):
         if prenom and nom and telephone:
             add_member(prenom, nom, adresse, telephone, cni)
-            st.success("🎉 Inscription réussie ! Vous êtes désormais membre de BD2027 – MBB.")
-            st.info("📲 Rejoignez-nous sur nos réseaux sociaux.")
+            st.success("🎉 Inscription réussie ! Bienvenue dans MBB.")
+            st.info("📲 Rejoignez-nous sur Facebook, WhatsApp et Instagram.")
         else:
-            st.error("⚠️ Merci de remplir au minimum : prénom, nom et numéro de téléphone.")
+            st.error("⚠️ Merci de remplir au minimum : prénom, nom, téléphone.")
 
-
-# ======================================================
+# ------------------------------------------------------------
 # 🔐 CONNEXION ADMIN
-# ======================================================
-
-with col2:
+# ------------------------------------------------------------
+with col_conn:
     st.subheader("🔐 Connexion administrateur")
 
     if not st.session_state.authenticated:
-
-        username = st.text_input("Identifiant")
+        username = st.text_input("Identifiant admin")
         password = st.text_input("Mot de passe", type="password")
 
         if st.button("Se connecter"):
             if username in USERS and USERS[username] == password:
                 st.session_state.authenticated = True
+                st.session_state.username = username
                 st.success("Connexion réussie ✔")
                 st.rerun()
             else:
                 st.error("❌ Identifiants incorrects.")
     else:
-        st.success("Connecté en tant qu’admin")
+        st.success(f"Connecté en tant que **{st.session_state.username}**")
         if st.button("Déconnexion"):
             st.session_state.authenticated = False
+            st.session_state.username = None
             st.rerun()
 
-
-# ======================================================
-# 👑 ESPACE ADMIN : BASE DE DONNÉES
-# ======================================================
+# ============================================================
+# 📘 ESPACE ADMIN : BASE DE DONNÉES + STATS
+# ============================================================
 
 if st.session_state.authenticated:
 
-    st.markdown("<hr>", unsafe_allow_html=True)
-    st.header("📘 Base de données des membres MBB")
+    st.markdown("---")
+    st.header("📘 Base de données MBB — Administration")
 
     df = load_data()
-
-    st.subheader("Liste complète des membres")
     st.dataframe(df, use_container_width=True)
 
-    # -----------------------
-    # STATS PAR QUARTIER
-    # -----------------------
-    if "Adresse" in df.columns and df["Adresse"].nunique() > 0:
+    # Si la colonne existe
+    if "Adresse" in df.columns:
         st.subheader("📊 Répartition par quartier")
 
         counts = df["Adresse"].value_counts().reset_index()
         counts.columns = ["Quartier", "Nombre"]
 
-        fig = px.bar(counts, x="Quartier", y="Nombre", color="Quartier", text="Nombre")
+        fig = px.bar(
+            counts, x="Quartier", y="Nombre", color="Quartier",
+            text="Nombre", title="Répartition des membres par quartier"
+        )
         st.plotly_chart(fig, use_container_width=True)
-
