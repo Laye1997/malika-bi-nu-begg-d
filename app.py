@@ -23,6 +23,7 @@ client = gspread.authorize(creds)
 SHEET_ID = st.secrets["google_sheet"]["SHEET_ID"]
 st.write("Loaded Sheet ID:", SHEET_ID)
 
+st.write(creds_info["client_email"])
 
 # Ouvrir le sheet
 sheet = client.open_by_key(SHEET_ID)
@@ -168,6 +169,7 @@ if st.session_state.authenticated:
             text="Nombre", title="Répartition des membres par quartier"
         )
         st.plotly_chart(fig, use_container_width=True)
+
 
 
 
