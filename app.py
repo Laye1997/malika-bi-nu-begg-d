@@ -24,6 +24,9 @@ client = gspread.authorize(creds)
 # ✅ SHEET_ID À LA RACINE DES SECRETS
 SHEET_ID = st.secrets["SHEET_ID"]
 
+
+st.success("Credentials Google chargés avec succès")
+
 # Ouvrir le Google Sheet
 sheet = client.open_by_key(SHEET_ID)
 worksheet = sheet.worksheet("Liste des membres")
@@ -175,3 +178,4 @@ if st.session_state.authenticated:
             title="Répartition des membres par quartier"
         )
         st.plotly_chart(fig, use_container_width=True)
+
