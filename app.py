@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime
 import plotly.express as px
 import folium
 from streamlit_folium import st_folium
@@ -25,7 +24,7 @@ CSV_URL = (
 )
 
 # ============================================================
-# 🔐 ADMIN
+# 🔐 UTILISATEURS ADMIN
 # ============================================================
 
 USERS = {
@@ -90,12 +89,10 @@ def post_to_google_form(prenom, nom, tel, adresse, cni):
         ENTRY_CNI: cni,
     }
     headers = {"User-Agent": "Mozilla/5.0"}
-    r = requests.post(FORM_BASE_URL, data=payload, headers=headers, timeout=15)
+    r = requests.post(FORM_BASE_URL, data=payload, headers=headers, timeout=10)
     return r.status_code in (200, 302)
 
-
-@st.cache_data(ttl=30)
-def load_google_sheet():
+def load_google_sheet_live():
     df = pd.read_csv(CSV_URL)
     df.columns = (
         df.columns.astype(str)
@@ -108,31 +105,28 @@ def load_google_sheet():
     )
     return df
 
-
 def normalize_phone(phone: str) -> str:
     if not phone:
         return ""
     phone = phone.strip()
-    phone = phone.replace(" ", "").replace("-", "")
-    phone = phone.replace("+", "")
+    phone = phone.replace(" ", "").replace("-", "").replace("+", "")
     return phone
 
+def phone_exists(phone: str) -> bool:
+    df = load_google_sheet_live()
 
-def phone_exists(df: pd.DataFrame, phone: str) -> bool:
     if "numero de telephone" not in df.columns:
         return False
 
     phone_norm = normalize_phone(phone)
-    phones = df["numero de telephone"].astype(str).apply(normalize_phone)
 
-    return phone_norm in phones.values
+    phones_db = (
+        df["numero de telephone"]
+        .astype(str)
+        .apply(normalize_phone)
+    )
 
-
-# ============================================================
-# 📊 DATA
-# ============================================================
-
-df = load_google_sheet()
+    return phone_norm in phones_db.values
 
 # ============================================================
 # 🧭 NAVIGATION
@@ -170,12 +164,11 @@ with tabs[0]:
             if submit:
                 if not (prenom and nom and tel and adresse):
                     st.warning("⚠️ Champs obligatoires manquants.")
-                elif phone_exists(df, tel):
+                elif phone_exists(tel):
                     st.error("🚫 Ce numéro de téléphone est déjà inscrit.")
                 else:
                     if post_to_google_form(prenom, nom, tel, adresse, cni):
                         st.success("✅ Inscription réussie !")
-                        st.cache_data.clear()
                         st.rerun()
                     else:
                         st.error("❌ Erreur lors de l’envoi.")
@@ -204,7 +197,7 @@ with tabs[0]:
     if st.session_state.authenticated:
         st.divider()
         st.subheader("📋 Liste des membres")
-        st.dataframe(df, use_container_width=True)
+        st.dataframe(load_google_sheet_live(), use_container_width=True)
 
 # ============================================================
 # 🏘️ PAR QUARTIER
@@ -214,13 +207,11 @@ with tabs[1]:
     if not st.session_state.authenticated:
         st.warning("🔐 Accès réservé aux administrateurs.")
     else:
-        if "adresse" not in df.columns:
-            st.error("Colonne adresse introuvable.")
-        else:
-            stats = df["adresse"].value_counts().reset_index()
-            stats.columns = ["Quartier", "Nombre"]
-            fig = px.bar(stats, x="Quartier", y="Nombre", color="Quartier", text="Nombre")
-            st.plotly_chart(fig, use_container_width=True)
+        df = load_google_sheet_live()
+        stats = df["adresse"].value_counts().reset_index()
+        stats.columns = ["Quartier", "Nombre"]
+        fig = px.bar(stats, x="Quartier", y="Nombre", text="Nombre")
+        st.plotly_chart(fig, use_container_width=True)
 
 # ============================================================
 # 🗳️ CARTE
