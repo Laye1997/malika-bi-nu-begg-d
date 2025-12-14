@@ -114,6 +114,35 @@ def load_google_sheet():
 
 df = load_google_sheet()
 
+def normalize_phone(phone: str) -> str:
+    """
+    Normalise les numéros pour éviter les doublons déguisés
+    Exemples :
+    +221 77 123 45 67 → 221771234567
+    77 123 45 67 → 771234567
+    """
+    if not phone:
+        return ""
+
+    phone = phone.strip()
+    phone = phone.replace(" ", "").replace("-", "")
+    phone = phone.replace("+", "")
+    return phone
+
+def phone_exists(df: pd.DataFrame, phone: str) -> bool:
+    if "numero de telephone" not in df.columns:
+        return False
+
+    phone_norm = normalize_phone(phone)
+
+    phones_in_db = (
+        df["numero de telephone"]
+        .astype(str)
+        .apply(normalize_phone)
+    )
+
+    return phone_norm in phones_in_db.values
+
 # ============================================================
 # 🧭 NAVIGATION
 # ============================================================
@@ -150,9 +179,18 @@ with tabs[0]:
             if submit:
                 if not (prenom and nom and tel and adresse):
                     st.warning("⚠️ Champs obligatoires manquants.")
-                elif post_to_google_form(prenom, nom, tel, adresse, cni):
-                    st.success("✅ Inscription réussie !")
-                    st.cache_data.clear()
+                # 🔎 Vérification doublon téléphone
+                    
+                if phone_exists(df, tel):
+                    st.error("🚫 Ce numéro de téléphone est déjà inscrit.")
+                else:
+                    if post_to_google_form(prenom, nom, tel, adresse, cni):
+                        st.success("✅ Inscription réussie !")
+                        st.cache_data.clear()
+                        st.rerun()
+                    else:
+                        st.error("❌ Erreur lors de l’envoi.")
+
                 else:
                     st.error("❌ Erreur lors de l’envoi.")
 
@@ -219,3 +257,4 @@ with tabs[3]:
         st.warning("🔐 Accès réservé.")
     else:
         st.info("À venir.")
+
