@@ -5,27 +5,26 @@ import gspread
 from google.oauth2.service_account import Credentials
 
 # ============================================================
-# 🔐 CONFIGURATION GOOGLE SHEETS VIA SECRETS STREAMLIT
+# 🔐 CONFIGURATION GOOGLE SHEETS VIA STREAMLIT SECRETS
 # ============================================================
 
-SCOPE = [
+SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive"
 ]
 
-# Charger les credentials depuis st.secrets
-creds_info = st.secrets["google_service_account"]
+# Charger les credentials depuis Streamlit Secrets
+creds = Credentials.from_service_account_info(
+    st.secrets["google_service_account"],
+    scopes=SCOPES
+)
 
-creds = Credentials.from_service_account_info(creds_info, scopes=SCOPE)
 client = gspread.authorize(creds)
 
-# Google Sheet ID
-SHEET_ID = st.secrets["google_sheet"]["SHEET_ID"]
-st.write("Loaded Sheet ID:", SHEET_ID)
+# ✅ SHEET_ID À LA RACINE DES SECRETS
+SHEET_ID = st.secrets["SHEET_ID"]
 
-st.write(creds_info["client_email"])
-
-# Ouvrir le sheet
+# Ouvrir le Google Sheet
 sheet = client.open_by_key(SHEET_ID)
 worksheet = sheet.worksheet("Liste des membres")
 
@@ -34,17 +33,14 @@ worksheet = sheet.worksheet("Liste des membres")
 # ============================================================
 
 def load_data():
-    """Lire toute la base depuis Google Sheets"""
     data = worksheet.get_all_records()
-    df = pd.DataFrame(data)
-    return df
+    return pd.DataFrame(data)
 
 def add_member(prenom, nom, adresse, telephone, cni):
-    """Ajouter un membre au Google Sheet"""
     worksheet.append_row([prenom, nom, adresse, telephone, cni])
 
 # ============================================================
-# 🔐 INFO ADMIN
+# 🔐 AUTHENTIFICATION ADMIN
 # ============================================================
 
 USERS = {"admin": "mbb2025"}
@@ -56,7 +52,7 @@ if "username" not in st.session_state:
     st.session_state.username = None
 
 # ============================================================
-# 🎨 DESIGN GÉNÉRAL
+# 🎨 CONFIG PAGE & STYLE
 # ============================================================
 
 st.set_page_config(page_title="Base MBB", page_icon="📘", layout="wide")
@@ -72,15 +68,22 @@ st.markdown("""
         h1,h2,h3 { color:#FFFFFF !important; }
         .banner {
             background: linear-gradient(90deg, var(--vert-fonce), var(--jaune-mbb));
-            color:white; padding:12px; border-radius:10px;
-            text-align:center; font-weight:bold; font-size:20px;
+            color:white;
+            padding:12px;
+            border-radius:10px;
+            text-align:center;
+            font-weight:bold;
+            font-size:20px;
             margin-bottom:15px;
             box-shadow:2px 2px 10px rgba(0,0,0,0.3);
         }
         .stButton>button {
             background: linear-gradient(45deg, var(--vert-fonce), var(--jaune-mbb));
-            color:white; border-radius:10px; font-weight:bold;
-            border:none; width:100%;
+            color:white;
+            border-radius:10px;
+            font-weight:bold;
+            border:none;
+            width:100%;
             box-shadow:1px 1px 4px rgba(0,0,0,0.3);
         }
         .stButton>button:hover {
@@ -92,7 +95,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ============================================================
-# 🏠 PAGE D’ACCUEIL : INSCRIPTION + LOGIN ADMIN
+# 🏠 PAGE D’ACCUEIL — INSCRIPTION + CONNEXION ADMIN
 # ============================================================
 
 st.markdown("<div class='banner'>Plateforme Officielle — BD2027 MBB</div>", unsafe_allow_html=True)
@@ -115,10 +118,10 @@ with col_insc:
     if st.button("Valider mon inscription"):
         if prenom and nom and telephone:
             add_member(prenom, nom, adresse, telephone, cni)
-            st.success("🎉 Inscription réussie ! Bienvenue dans MBB.")
+            st.success("🎉 Inscription réussie ! Bienvenue dans le mouvement MBB.")
             st.info("📲 Rejoignez-nous sur Facebook, WhatsApp et Instagram.")
         else:
-            st.error("⚠️ Merci de remplir au minimum : prénom, nom, téléphone.")
+            st.error("⚠️ Merci de remplir au minimum : prénom, nom et téléphone.")
 
 # ------------------------------------------------------------
 # 🔐 CONNEXION ADMIN
@@ -146,31 +149,29 @@ with col_conn:
             st.rerun()
 
 # ============================================================
-# 📘 ESPACE ADMIN : BASE DE DONNÉES + STATS
+# 📘 ESPACE ADMIN — BASE DE DONNÉES + STATISTIQUES
 # ============================================================
 
 if st.session_state.authenticated:
 
     st.markdown("---")
-    st.header("📘 Base de données MBB — Administration")
+    st.header("📘 Base de données MBB — Espace Administrateur")
 
     df = load_data()
     st.dataframe(df, use_container_width=True)
 
-    # Si la colonne existe
     if "Adresse" in df.columns:
-        st.subheader("📊 Répartition par quartier")
+        st.subheader("📊 Répartition des membres par quartier")
 
         counts = df["Adresse"].value_counts().reset_index()
         counts.columns = ["Quartier", "Nombre"]
 
         fig = px.bar(
-            counts, x="Quartier", y="Nombre", color="Quartier",
-            text="Nombre", title="Répartition des membres par quartier"
+            counts,
+            x="Quartier",
+            y="Nombre",
+            color="Quartier",
+            text="Nombre",
+            title="Répartition des membres par quartier"
         )
         st.plotly_chart(fig, use_container_width=True)
-
-
-
-
-
