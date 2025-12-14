@@ -10,17 +10,14 @@ import requests
 # 🔗 GOOGLE FORM & GOOGLE SHEET
 # ============================================================
 
-# Google Form (formResponse)
 FORM_BASE_URL = "https://docs.google.com/forms/d/13sosy-0J8AXQVWf3DDKoy8cY9qv_ODJGgaKt08ENrAI/formResponse"
 
-# IDs des champs (entry.xxxxx)
 ENTRY_PRENOM = "entry.1181294215"
 ENTRY_NOM = "entry.2048123513"
 ENTRY_TEL = "entry.915975688"
 ENTRY_ADRESSE = "entry.1503668516"
 ENTRY_CNI = "entry.732417991"
 
-# Google Sheet → onglet "Form Responses 1"
 CSV_URL = (
     "https://docs.google.com/spreadsheets/d/"
     "1hqZUWm0_i5kruXugBZupfYz967JsqbXhK_cWaV3bsbM"
@@ -28,7 +25,7 @@ CSV_URL = (
 )
 
 # ============================================================
-# 🔐 UTILISATEURS ADMIN
+# 🔐 ADMIN
 # ============================================================
 
 USERS = {
@@ -93,7 +90,7 @@ def post_to_google_form(prenom, nom, tel, adresse, cni):
         ENTRY_CNI: cni,
     }
     headers = {"User-Agent": "Mozilla/5.0"}
-    r = requests.post(FORM_BASE_URL, data=payload, headers=headers)
+    r = requests.post(FORM_BASE_URL, data=payload, headers=headers, timeout=15)
     return r.status_code in (200, 302)
 
 
@@ -112,36 +109,30 @@ def load_google_sheet():
     return df
 
 
-df = load_google_sheet()
-
 def normalize_phone(phone: str) -> str:
-    """
-    Normalise les numéros pour éviter les doublons déguisés
-    Exemples :
-    +221 77 123 45 67 → 221771234567
-    77 123 45 67 → 771234567
-    """
     if not phone:
         return ""
-
     phone = phone.strip()
     phone = phone.replace(" ", "").replace("-", "")
     phone = phone.replace("+", "")
     return phone
+
 
 def phone_exists(df: pd.DataFrame, phone: str) -> bool:
     if "numero de telephone" not in df.columns:
         return False
 
     phone_norm = normalize_phone(phone)
+    phones = df["numero de telephone"].astype(str).apply(normalize_phone)
 
-    phones_in_db = (
-        df["numero de telephone"]
-        .astype(str)
-        .apply(normalize_phone)
-    )
+    return phone_norm in phones.values
 
-    return phone_norm in phones_in_db.values
+
+# ============================================================
+# 📊 DATA
+# ============================================================
+
+df = load_google_sheet()
 
 # ============================================================
 # 🧭 NAVIGATION
@@ -162,12 +153,12 @@ with tabs[0]:
     st.markdown("<div class='banner'>MALIKA BI ÑU BËGG – Une nouvelle ère s’annonce 🌍</div>", unsafe_allow_html=True)
     st.title("📘 Mouvement BD2027 – MBB")
 
-    st.subheader("📝 Inscription comme membre")
-
     col_form, col_login = st.columns(2)
 
     # ================= FORMULAIRE =================
     with col_form:
+        st.subheader("📝 Inscription comme membre")
+
         with st.form("inscription"):
             prenom = st.text_input("Prénom")
             nom = st.text_input("Nom")
@@ -179,9 +170,7 @@ with tabs[0]:
             if submit:
                 if not (prenom and nom and tel and adresse):
                     st.warning("⚠️ Champs obligatoires manquants.")
-                # 🔎 Vérification doublon téléphone
-                    
-                if phone_exists(df, tel):
+                elif phone_exists(df, tel):
                     st.error("🚫 Ce numéro de téléphone est déjà inscrit.")
                 else:
                     if post_to_google_form(prenom, nom, tel, adresse, cni):
@@ -191,10 +180,7 @@ with tabs[0]:
                     else:
                         st.error("❌ Erreur lors de l’envoi.")
 
-                else:
-                    st.error("❌ Erreur lors de l’envoi.")
-
-    # ================= ADMIN LOGIN =================
+    # ================= ADMIN =================
     with col_login:
         st.subheader("🔐 Connexion administrateur")
         if not st.session_state.authenticated:
@@ -257,4 +243,3 @@ with tabs[3]:
         st.warning("🔐 Accès réservé.")
     else:
         st.info("À venir.")
-
