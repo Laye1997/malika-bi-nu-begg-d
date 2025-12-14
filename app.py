@@ -2,19 +2,15 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 import plotly.express as px
-import os
 import folium
 from streamlit_folium import st_folium
 
-# ============================================================
-# ✅ CONFIG (SANS SECRETS)
-# ============================================================
+# =====================================================
+# 🔧 CONFIGURATION (SANS SECRETS)
+# =====================================================
 
-# 1) URL CSV (depuis "Publier sur le web" -> CSV)
-CSV_URL = "COLLE_ICI_TON_LIEN_CSV_PUBLIE"
-
-# 2) URL Google Form EMBED (viewform?embedded=true)
-FORM_URL = "COLLE_ICI_TON_LIEN_GOOGLE_FORM_EMBED"
+CSV_URL = "COLLE_ICI_LE_LIEN_CSV_PUBLIE"
+FORM_URL = "COLLE_ICI_LE_LIEN_GOOGLE_FORM_EMBED"
 
 VISUEL = "561812309_122099008227068424_7173387226638749981_n.jpg"
 
@@ -23,183 +19,173 @@ USERS = {
     "president": "malika2025"
 }
 
-st.set_page_config(page_title="Base de données MBB", page_icon="📘", layout="wide")
+# =====================================================
+# ⚙️ PAGE
+# =====================================================
 
-# ============================================================
+st.set_page_config(
+    page_title="Base de données MBB",
+    page_icon="📘",
+    layout="wide"
+)
+
+# =====================================================
 # 🎨 STYLE
-# ============================================================
+# =====================================================
 
 st.markdown("""
 <style>
-:root { --vert:#145A32; --jaune:#F4D03F; --blanc:#FFFFFF; }
-.stApp{
+:root { --vert:#145A32; --jaune:#F4D03F; }
+.stApp {
     background: linear-gradient(120deg, var(--vert), var(--jaune));
-    color: var(--blanc);
+    color: white;
     font-family: "Segoe UI", sans-serif;
 }
-h1,h2,h3,h4 { color:#FFFFFF !important; }
-.banner{
+h1,h2,h3,h4 { color:white !important; }
+.banner {
     background: linear-gradient(90deg, var(--vert), var(--jaune));
-    color:white;
     padding:14px;
     border-radius:12px;
     text-align:center;
-    font-weight:bold;
     font-size:22px;
-    margin-bottom:16px;
-    box-shadow:2px 2px 12px rgba(0,0,0,0.35);
+    font-weight:bold;
+    margin-bottom:20px;
 }
-.stButton>button{
+.stButton>button {
     background: linear-gradient(45deg, var(--vert), var(--jaune));
     color:white;
-    border-radius:12px;
+    border-radius:10px;
     font-weight:bold;
     border:none;
-    width:100%;
 }
-.stButton>button:hover{
-    background: linear-gradient(45deg, var(--jaune), var(--vert));
-    color:black;
-}
-header[data-testid="stHeader"], footer, #MainMenu { display:none !important; }
+header, footer, #MainMenu { display:none !important; }
 </style>
 """, unsafe_allow_html=True)
 
-# ============================================================
+# =====================================================
 # 🔐 SESSION
-# ============================================================
+# =====================================================
 
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 if "username" not in st.session_state:
     st.session_state.username = None
 
-# ============================================================
-# 📥 CHARGEMENT CSV (PUBLIC)
-# ============================================================
+# =====================================================
+# 📥 CHARGEMENT DONNÉES (CSV PUBLIC)
+# =====================================================
 
 @st.cache_data(show_spinner=False)
-def load_data_from_public_csv(url: str) -> pd.DataFrame:
-    df = pd.read_csv(url)
-
-    # ✅ nettoyage robuste (corrige ton erreur .str sur colonnes non-string)
+def load_data():
+    df = pd.read_csv(CSV_URL)
     df.columns = [str(c).strip() for c in df.columns]
-
-    # retire colonnes vides éventuelles
-    df = df.dropna(axis=1, how="all")
     return df
 
-def normalize_text(s: str) -> str:
-    return (str(s).strip().lower()
-            .replace("é", "e").replace("è", "e").replace("ê", "e")
-            .replace("à", "a").replace("ç", "c"))
-
-# ============================================================
+# =====================================================
 # 🖼️ VISUEL
-# ============================================================
+# =====================================================
 
-if os.path.exists(VISUEL):
+try:
     st.image(VISUEL, use_container_width=True)
+except:
+    pass
 
-# ============================================================
-# 🧭 NAVIGATION
-# ============================================================
+# =====================================================
+# 🧭 ONGLET
+# =====================================================
 
 tabs = st.tabs([
-    "🏠 Accueil (Inscription)",
+    "🏠 Inscription",
     "📊 Statistiques",
     "🗳️ Carte électorale",
     "🔐 Administration"
 ])
 
-# ============================================================
-# 🏠 ONGLET 1 — FORMULAIRE DIRECT SUR LA PAGE
-# ============================================================
+# =====================================================
+# 🏠 ONGLET INSCRIPTION (FORM DIRECT)
+# =====================================================
 
 with tabs[0]:
     st.markdown("<div class='banner'>MALIKA BI ÑU BËGG – Une nouvelle ère s’annonce 🌍</div>", unsafe_allow_html=True)
     st.title("📘 Mouvement BD2027 – MBB")
     st.subheader("📝 Inscription comme membre")
 
-    # ✅ Form visible directement — aucun lien vers Sheets
     st.markdown(
         f"""
-        <iframe
-            src="{FORM_URL}"
-            width="100%"
-            height="900"
-            frameborder="0"
-            style="background:white; border-radius:12px;">
-        Chargement…
+        <iframe src="{FORM_URL}"
+        width="100%"
+        height="900"
+        frameborder="0"
+        style="background:white; border-radius:12px;">
         </iframe>
         """,
         unsafe_allow_html=True
     )
 
-    st.info("✅ Vos informations sont enregistrées automatiquement. Merci 🙏")
+    st.success("✅ Inscription simple, rapide et sécurisée.")
 
-# ============================================================
-# 📊 ONGLET 2 — STATS (lecture depuis CSV publié)
-# ============================================================
+# =====================================================
+# 📊 ONGLET STATISTIQUES
+# =====================================================
 
 with tabs[1]:
-    st.subheader("📊 Statistiques")
-
     try:
-        df = load_data_from_public_csv(CSV_URL)
-        st.success("✅ Données chargées.")
+        df = load_data()
+        st.subheader("📊 Statistiques générales")
 
-        # Trouver colonne adresse/quartier
-        cols_norm = {c: normalize_text(c) for c in df.columns}
-        adresse_col = None
-        for c, cn in cols_norm.items():
-            if "adresse" in cn or "quartier" in cn:
-                adresse_col = c
+        # Trouver colonne quartier/adresse
+        col_adresse = None
+        for c in df.columns:
+            if "adress" in c.lower() or "quartier" in c.lower():
+                col_adresse = c
                 break
 
-        st.write("📅 Mise à jour :", datetime.now().strftime("%d/%m/%Y %H:%M"))
+        if col_adresse:
+            counts = df[col_adresse].value_counts().reset_index()
+            counts.columns = ["Quartier", "Nombre"]
 
-        if adresse_col:
-            counts = df[adresse_col].fillna("Non renseigné").value_counts().reset_index()
-            counts.columns = ["Quartier", "Nombre de membres"]
-            fig = px.bar(counts, x="Quartier", y="Nombre de membres", color="Quartier", text="Nombre de membres")
+            fig = px.bar(
+                counts,
+                x="Quartier",
+                y="Nombre",
+                color="Quartier",
+                text="Nombre"
+            )
             st.plotly_chart(fig, use_container_width=True)
         else:
-            st.warning("Colonne 'Adresse/Quartier' introuvable dans le CSV.")
+            st.warning("Colonne Quartier / Adresse non trouvée.")
 
     except Exception as e:
-        st.error("❌ Impossible de charger les données.")
+        st.error("❌ Impossible de charger les statistiques.")
         st.code(str(e))
 
-# ============================================================
-# 🗳️ ONGLET 3 — CARTE
-# ============================================================
+# =====================================================
+# 🗳️ ONGLET CARTE
+# =====================================================
 
 with tabs[2]:
     st.subheader("🗳️ Carte électorale – Commune de Malika")
 
-    data_centres = pd.DataFrame({
+    centres = pd.DataFrame({
         "Centre": ["École Malika Montagne", "École Privée Sanka", "École Seydi Anta Gadiaga"],
         "Bureaux": [14, 20, 18],
         "Lat": [14.7889, 14.7858, 14.7915],
-        "Lon": [-17.3085, -17.3120, -17.3048],
+        "Lon": [-17.3085, -17.3120, -17.3048]
     })
 
-    fig = px.bar(data_centres, x="Centre", y="Bureaux", color="Centre", text="Bureaux")
+    fig = px.bar(centres, x="Centre", y="Bureaux", color="Centre", text="Bureaux")
     st.plotly_chart(fig, use_container_width=True)
 
-    m = folium.Map(location=[14.7889, -17.3090], zoom_start=15, tiles="CartoDB positron")
-    for _, r in data_centres.iterrows():
-        folium.Marker([r["Lat"], r["Lon"]], popup=r["Centre"], tooltip=r["Centre"]).add_to(m)
+    m = folium.Map(location=[14.789, -17.309], zoom_start=15)
+    for _, r in centres.iterrows():
+        folium.Marker([r.Lat, r.Lon], popup=r.Centre).add_to(m)
     st_folium(m, height=450)
 
-# ============================================================
-# 🔐 ONGLET 4 — ADMIN (liste complète + stats)
-# ============================================================
+# =====================================================
+# 🔐 ONGLET ADMIN
+# =====================================================
 
 with tabs[3]:
-    st.subheader("🔐 Connexion administrateur")
-
     if not st.session_state.authenticated:
         user = st.text_input("Identifiant")
         pwd = st.text_input("Mot de passe", type="password")
@@ -208,23 +194,24 @@ with tabs[3]:
             if user in USERS and USERS[user] == pwd:
                 st.session_state.authenticated = True
                 st.session_state.username = user
-                st.success("✅ Connexion réussie")
+                st.success("Connexion réussie")
                 st.rerun()
             else:
-                st.error("❌ Identifiants incorrects")
+                st.error("Identifiants incorrects")
     else:
-        st.success(f"Connecté en tant que **{st.session_state.username}**")
+        st.success(f"Connecté : {st.session_state.username}")
+
         if st.button("Déconnexion"):
             st.session_state.authenticated = False
             st.session_state.username = None
             st.rerun()
 
         st.divider()
-        st.subheader("📘 Liste complète des membres (lecture CSV)")
+        st.subheader("📘 Base complète des membres")
 
         try:
-            df = load_data_from_public_csv(CSV_URL)
+            df = load_data()
             st.dataframe(df, use_container_width=True)
         except Exception as e:
-            st.error("Impossible de charger la base.")
+            st.error("Erreur chargement base")
             st.code(str(e))
