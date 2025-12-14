@@ -92,6 +92,7 @@ def post_to_google_form(prenom, nom, tel, adresse, cni):
     r = requests.post(FORM_BASE_URL, data=payload, headers=headers, timeout=10)
     return r.status_code in (200, 302)
 
+
 def load_google_sheet_live():
     df = pd.read_csv(CSV_URL)
     df.columns = (
@@ -105,12 +106,17 @@ def load_google_sheet_live():
     )
     return df
 
+
 def normalize_phone(phone: str) -> str:
     if not phone:
         return ""
-    phone = phone.strip()
-    phone = phone.replace(" ", "").replace("-", "").replace("+", "")
-    return phone
+    return (
+        phone.strip()
+        .replace(" ", "")
+        .replace("-", "")
+        .replace("+", "")
+    )
+
 
 def phone_exists(phone: str) -> bool:
     df = load_google_sheet_live()
@@ -119,12 +125,7 @@ def phone_exists(phone: str) -> bool:
         return False
 
     phone_norm = normalize_phone(phone)
-
-    phones_db = (
-        df["numero de telephone"]
-        .astype(str)
-        .apply(normalize_phone)
-    )
+    phones_db = df["numero de telephone"].astype(str).apply(normalize_phone)
 
     return phone_norm in phones_db.values
 
@@ -144,7 +145,10 @@ tabs = st.tabs([
 # ============================================================
 
 with tabs[0]:
-    st.markdown("<div class='banner'>MALIKA BI ÑU BËGG – Une nouvelle ère s’annonce 🌍</div>", unsafe_allow_html=True)
+    st.markdown(
+        "<div class='banner'>MALIKA BI ÑU BËGG – Une nouvelle ère s’annonce 🌍</div>",
+        unsafe_allow_html=True
+    )
     st.title("📘 Mouvement BD2027 – MBB")
 
     col_form, col_login = st.columns(2)
@@ -176,9 +180,11 @@ with tabs[0]:
     # ================= ADMIN =================
     with col_login:
         st.subheader("🔐 Connexion administrateur")
+
         if not st.session_state.authenticated:
             u = st.text_input("Identifiant")
             p = st.text_input("Mot de passe", type="password")
+
             if st.button("Se connecter"):
                 if u in USERS and USERS[u] == p:
                     st.session_state.authenticated = True
@@ -198,39 +204,3 @@ with tabs[0]:
         st.divider()
         st.subheader("📋 Liste des membres")
         st.dataframe(load_google_sheet_live(), use_container_width=True)
-
-# ============================================================
-# 🏘️ PAR QUARTIER
-# ============================================================
-
-with tabs[1]:
-    if not st.session_state.authenticated:
-        st.warning("🔐 Accès réservé aux administrateurs.")
-    else:
-        df = load_google_sheet_live()
-        stats = df["adresse"].value_counts().reset_index()
-        stats.columns = ["Quartier", "Nombre"]
-        fig = px.bar(stats, x="Quartier", y="Nombre", text="Nombre")
-        st.plotly_chart(fig, use_container_width=True)
-
-# ============================================================
-# 🗳️ CARTE
-# ============================================================
-
-with tabs[2]:
-    if not st.session_state.authenticated:
-        st.warning("🔐 Accès réservé.")
-    else:
-        m = folium.Map(location=[14.7889, -17.3090], zoom_start=14)
-        folium.Marker([14.7889, -17.3085], tooltip="Malika").add_to(m)
-        st_folium(m, width=800)
-
-# ============================================================
-# 📝 COMPTE RENDU
-# ============================================================
-
-with tabs[3]:
-    if not st.session_state.authenticated:
-        st.warning("🔐 Accès réservé.")
-    else:
-        st.info("À venir.")
