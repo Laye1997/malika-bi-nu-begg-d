@@ -5,7 +5,7 @@ import gspread
 from google.oauth2.service_account import Credentials
 
 # ============================================================
-# 🔐 CONFIGURATION GOOGLE SHEETS VIA STREAMLIT SECRETS
+# 🔐 AUTHENTIFICATION GOOGLE SHEETS (MÉTHODE STABLE)
 # ============================================================
 
 SCOPES = [
@@ -13,21 +13,16 @@ SCOPES = [
     "https://www.googleapis.com/auth/drive"
 ]
 
-# Charger les credentials depuis Streamlit Secrets
-creds = Credentials.from_service_account_info(
-    st.secrets["google_service_account"],
+# ⚠️ credentials.json DOIT être uploadé dans Streamlit Cloud
+creds = Credentials.from_service_account_file(
+    "credentials.json",
     scopes=SCOPES
 )
 
 client = gspread.authorize(creds)
 
-# ✅ SHEET_ID À LA RACINE DES SECRETS
 SHEET_ID = st.secrets["SHEET_ID"]
 
-
-st.success("Credentials Google chargés avec succès")
-
-# Ouvrir le Google Sheet
 sheet = client.open_by_key(SHEET_ID)
 worksheet = sheet.worksheet("Liste des membres")
 
@@ -36,8 +31,7 @@ worksheet = sheet.worksheet("Liste des membres")
 # ============================================================
 
 def load_data():
-    data = worksheet.get_all_records()
-    return pd.DataFrame(data)
+    return pd.DataFrame(worksheet.get_all_records())
 
 def add_member(prenom, nom, adresse, telephone, cni):
     worksheet.append_row([prenom, nom, adresse, telephone, cni])
@@ -55,95 +49,79 @@ if "username" not in st.session_state:
     st.session_state.username = None
 
 # ============================================================
-# 🎨 CONFIG PAGE & STYLE
+# 🎨 CONFIGURATION DE LA PAGE
 # ============================================================
 
-st.set_page_config(page_title="Base MBB", page_icon="📘", layout="wide")
+st.set_page_config(page_title="BD2027 – MBB", page_icon="📘", layout="wide")
 
 st.markdown("""
     <style>
-        :root { --vert-fonce:#145A32; --jaune-mbb:#F4D03F; --blanc:#FFFFFF; }
+        :root { --vert-fonce:#145A32; --jaune-mbb:#F4D03F; }
         .stApp {
             background: linear-gradient(120deg, var(--vert-fonce), var(--jaune-mbb));
-            color: var(--blanc);
+            color: white;
             font-family: "Segoe UI", sans-serif;
         }
-        h1,h2,h3 { color:#FFFFFF !important; }
+        h1,h2,h3 { color:white !important; }
         .banner {
             background: linear-gradient(90deg, var(--vert-fonce), var(--jaune-mbb));
-            color:white;
             padding:12px;
             border-radius:10px;
             text-align:center;
             font-weight:bold;
             font-size:20px;
-            margin-bottom:15px;
-            box-shadow:2px 2px 10px rgba(0,0,0,0.3);
+            margin-bottom:20px;
         }
-        .stButton>button {
-            background: linear-gradient(45deg, var(--vert-fonce), var(--jaune-mbb));
-            color:white;
-            border-radius:10px;
-            font-weight:bold;
-            border:none;
-            width:100%;
-            box-shadow:1px 1px 4px rgba(0,0,0,0.3);
-        }
-        .stButton>button:hover {
-            background: linear-gradient(45deg, var(--jaune-mbb), var(--vert-fonce));
-            color:black;
-        }
-        header[data-testid="stHeader"], #MainMenu, footer { display:none !important; }
+        header, footer, #MainMenu { display:none !important; }
     </style>
 """, unsafe_allow_html=True)
 
 # ============================================================
-# 🏠 PAGE D’ACCUEIL — INSCRIPTION + CONNEXION ADMIN
+# 🏠 PAGE D’ACCUEIL
 # ============================================================
 
-st.markdown("<div class='banner'>Plateforme Officielle — BD2027 MBB</div>", unsafe_allow_html=True)
-st.title("Bienvenue sur la plateforme d'inscription")
+st.markdown("<div class='banner'>Plateforme Officielle – BD2027 MBB</div>", unsafe_allow_html=True)
+st.title("Inscription des membres")
 
-col_insc, col_conn = st.columns(2)
+col1, col2 = st.columns(2)
 
 # ------------------------------------------------------------
 # 📝 INSCRIPTION MEMBRE
 # ------------------------------------------------------------
-with col_insc:
-    st.subheader("📝 Inscription comme membre")
+with col1:
+    st.subheader("📝 Inscription")
 
     prenom = st.text_input("Prénom")
     nom = st.text_input("Nom")
-    telephone = st.text_input("Numéro de téléphone")
-    adresse = st.text_input("Adresse (quartier)")
-    cni = st.text_input("Numéro de CNI (optionnel)")
+    telephone = st.text_input("Téléphone")
+    adresse = st.text_input("Quartier")
+    cni = st.text_input("CNI (optionnel)")
 
-    if st.button("Valider mon inscription"):
+    if st.button("S'inscrire"):
         if prenom and nom and telephone:
             add_member(prenom, nom, adresse, telephone, cni)
             st.success("🎉 Inscription réussie ! Bienvenue dans le mouvement MBB.")
-            st.info("📲 Rejoignez-nous sur Facebook, WhatsApp et Instagram.")
         else:
-            st.error("⚠️ Merci de remplir au minimum : prénom, nom et téléphone.")
+            st.error("⚠️ Prénom, nom et téléphone sont obligatoires.")
 
 # ------------------------------------------------------------
 # 🔐 CONNEXION ADMIN
 # ------------------------------------------------------------
-with col_conn:
+with col2:
     st.subheader("🔐 Connexion administrateur")
 
     if not st.session_state.authenticated:
-        username = st.text_input("Identifiant admin")
+        username = st.text_input("Identifiant")
         password = st.text_input("Mot de passe", type="password")
 
-        if st.button("Se connecter"):
-            if username in USERS and USERS[username] == password:
+        if st.button("Connexion"):
+            if USERS.get(username) == password:
                 st.session_state.authenticated = True
                 st.session_state.username = username
-                st.success("Connexion réussie ✔")
+                st.success("Connexion réussie")
                 st.rerun()
             else:
-                st.error("❌ Identifiants incorrects.")
+                st.error("Identifiants incorrects")
     else:
         st.success(f"Connecté en tant que **{st.session_state.username}**")
         if st.button("Déconnexion"):
@@ -152,30 +130,20 @@ with col_conn:
             st.rerun()
 
 # ============================================================
-# 📘 ESPACE ADMIN — BASE DE DONNÉES + STATISTIQUES
+# 📘 ESPACE ADMIN
 # ============================================================
 
 if st.session_state.authenticated:
-
     st.markdown("---")
-    st.header("📘 Base de données MBB — Espace Administrateur")
+    st.header("📘 Base de données des membres")
 
     df = load_data()
     st.dataframe(df, use_container_width=True)
 
     if "Adresse" in df.columns:
-        st.subheader("📊 Répartition des membres par quartier")
+        st.subheader("📊 Répartition par quartier")
+        stats = df["Adresse"].value_counts().reset_index()
+        stats.columns = ["Quartier", "Nombre"]
 
-        counts = df["Adresse"].value_counts().reset_index()
-        counts.columns = ["Quartier", "Nombre"]
-
-        fig = px.bar(
-            counts,
-            x="Quartier",
-            y="Nombre",
-            color="Quartier",
-            text="Nombre",
-            title="Répartition des membres par quartier"
-        )
+        fig = px.bar(stats, x="Quartier", y="Nombre", text="Nombre")
         st.plotly_chart(fig, use_container_width=True)
-
