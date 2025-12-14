@@ -1,5 +1,3 @@
-
-
 import streamlit as st
 import pandas as pd
 import os
@@ -7,57 +5,78 @@ from datetime import datetime
 import plotly.express as px
 import folium
 from streamlit_folium import st_folium
+from urllib.parse import urlencode
+import requests
 
-# === CONFIGURATION ===
+# ============================================================
+# ✅ CONFIGURATION
+# ============================================================
+
+# 1) Google Form (PAS Google Sheet)
+# Mets ici le lien "viewform" de TON Google Form, ex:
+# https://docs.google.com/forms/d/e/XXXXXXXXXXXX/viewform
+FORM_BASE_URL = "https://docs.google.com/forms/d/e/XXXXXXXXXXXX/viewform"
+
+# 2) IDs des champs (tes entry.xxxxx)
+ENTRY_PRENOM = "entry.1181294215"
+ENTRY_NOM = "entry.2048123513"
+ENTRY_TEL = "entry.915975688"
+ENTRY_ADRESSE = "entry.1503668516"
+ENTRY_CNI = "entry.732417991"
+
+# Excel local optionnel (si tu veux aussi garder une copie locale)
 FICHIER_EXCEL = "Liste_Membres.xlsx"
-CODE_SECRET = "MBB2025"  # (plus utilisé pour l'inscription publique mais conservé si besoin)
 VISUEL = "561812309_122099008227068424_7173387226638749981_n.jpg"
 
-# === IDENTIFIANTS DE CONNEXION (comme avant) ===
+# Identifiants de connexion admin
 USERS = {
     "admin": "mbb2025",
-    "president": "malika2025"
+    "president": "malika2025",
 }
 
-# === PARAMÈTRES DE LA PAGE ===
+# ============================================================
+# 🎛️ PAGE
+# ============================================================
+
 st.set_page_config(page_title="Base de données MBB", page_icon="📘", layout="wide")
 
-# === STYLE GLOBAL (responsive + mobile friendly) ===
 st.markdown("""
-    <style>
-        :root { --vert-fonce:#145A32; --jaune-mbb:#F4D03F; --blanc:#FFFFFF; }
-        .stApp {
-            background: linear-gradient(120deg, var(--vert-fonce), var(--jaune-mbb));
-            color: var(--blanc); font-family: "Segoe UI", sans-serif;
-        }
-        h1,h2,h3 { color:#FFFFFF !important; }
-        .banner {
-            background: linear-gradient(90deg, var(--vert-fonce), var(--jaune-mbb));
-            color:white; padding:12px; border-radius:10px; text-align:center;
-            font-weight:bold; font-size:20px; margin-bottom:15px; box-shadow:2px 2px 10px rgba(0,0,0,0.3);
-        }
-        .stButton>button {
-            background: linear-gradient(45deg, var(--vert-fonce), var(--jaune-mbb));
-            color:white; border-radius:10px; font-weight:bold; border:none; width:100%;
-            box-shadow:1px 1px 4px rgba(0,0,0,0.3);
-        }
-        .stButton>button:hover {
-            background: linear-gradient(45deg, var(--jaune-mbb), var(--vert-fonce)); color:black;
-        }
-        header[data-testid="stHeader"], #MainMenu, footer { display:none !important; }
-        @media (max-width:768px){ .stApp{ font-size:15px !important; } }
-        /* Dataframe hover */
-        [data-testid="stDataFrame"] table tbody tr:hover { background:#FCF3CF !important; color:#000 !important; }
-    </style>
+<style>
+    :root { --vert-fonce:#145A32; --jaune-mbb:#F4D03F; --blanc:#FFFFFF; }
+    .stApp {
+        background: linear-gradient(120deg, var(--vert-fonce), var(--jaune-mbb));
+        color: var(--blanc); font-family: "Segoe UI", sans-serif;
+    }
+    h1,h2,h3 { color:#FFFFFF !important; }
+    .banner {
+        background: linear-gradient(90deg, var(--vert-fonce), var(--jaune-mbb));
+        color:white; padding:12px; border-radius:10px; text-align:center;
+        font-weight:bold; font-size:20px; margin-bottom:15px; box-shadow:2px 2px 10px rgba(0,0,0,0.3);
+    }
+    .stButton>button {
+        background: linear-gradient(45deg, var(--vert-fonce), var(--jaune-mbb));
+        color:white; border-radius:10px; font-weight:bold; border:none; width:100%;
+        box-shadow:1px 1px 4px rgba(0,0,0,0.3);
+    }
+    .stButton>button:hover {
+        background: linear-gradient(45deg, var(--jaune-mbb), var(--vert-fonce)); color:black;
+    }
+    header[data-testid="stHeader"], #MainMenu, footer { display:none !important; }
+    @media (max-width:768px){ .stApp{ font-size:15px !important; } }
+    [data-testid="stDataFrame"] table tbody tr:hover { background:#FCF3CF !important; color:#000 !important; }
+</style>
 """, unsafe_allow_html=True)
 
-# === SESSION CONNEXION ===
+# ============================================================
+# 🔐 SESSION
+# ============================================================
+
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 if "username" not in st.session_state:
     st.session_state.username = None
 
-# === BARRE LATÉRALE (uniquement si connecté) ===
+# Sidebar déconnexion
 if st.session_state.authenticated and st.session_state.username:
     st.sidebar.success(f"Connecté en tant que **{st.session_state.username}**")
     if st.sidebar.button("🔒 Déconnexion"):
@@ -65,29 +84,106 @@ if st.session_state.authenticated and st.session_state.username:
         st.session_state.username = None
         st.rerun()
 
-# === VISUEL ===
+# ============================================================
+# 🖼️ VISUEL
+# ============================================================
+
 if os.path.exists(VISUEL):
     st.image(VISUEL, use_container_width=True)
 
-# === CHARGEMENT DU FICHIER EXCEL ===
-if not os.path.exists(FICHIER_EXCEL):
-    st.error(f"❌ Le fichier {FICHIER_EXCEL} est introuvable.")
-    st.stop()
+# ============================================================
+# ✅ FONCTIONS
+# ============================================================
 
-# Ligne 0 de l’Excel = en-tête → header=1 si ta 1ère ligne est une légende au-dessus
-df = pd.read_excel(FICHIER_EXCEL, sheet_name="Liste des membres", header=1)
+def post_to_google_form(prenom: str, nom: str, tel: str, adresse: str, cni: str) -> bool:
+    """
+    Envoie une réponse au Google Form via POST "formResponse".
+    Aucun secret. Aucune clé.
+    """
+    if "docs.google.com/forms" not in FORM_BASE_URL:
+        st.error("⚠️ FORM_BASE_URL n’est pas configuré. Mets le lien viewform de ton Google Form.")
+        return False
 
-# Normalisation colonnes + suppression doublons de colonnes (comme avant)
-df.columns = (df.columns.str.strip().str.lower()
-              .str.replace("é", "e").str.replace("è", "e").str.replace("ê", "e")
-              .str.replace("à", "a").str.replace("ç", "c"))
-df = df.loc[:, ~df.columns.duplicated()]
+    form_response_url = FORM_BASE_URL.replace("/viewform", "/formResponse")
 
-# Localiser la colonne adresse
+    payload = {
+        ENTRY_PRENOM: prenom,
+        ENTRY_NOM: nom,
+        ENTRY_TEL: tel,
+        ENTRY_ADRESSE: adresse,
+        ENTRY_CNI: cni,
+    }
+
+    # Google Forms accepte souvent un POST sans authentification.
+    # On met un user-agent pour éviter certains blocages.
+    headers = {"User-Agent": "Mozilla/5.0"}
+
+    try:
+        r = requests.post(form_response_url, data=payload, headers=headers, timeout=15)
+        # Google Forms renvoie souvent 200 ou 302. On accepte les deux.
+        return r.status_code in (200, 302)
+    except Exception:
+        return False
+
+
+def safe_normalize_columns(cols):
+    """Normalise colonnes sans planter si certaines ne sont pas des strings."""
+    cols = ["" if c is None else str(c) for c in cols]
+    s = pd.Index(cols)
+    s = (s.str.strip().str.lower()
+         .str.replace("é", "e").str.replace("è", "e").str.replace("ê", "e")
+         .str.replace("à", "a").str.replace("ç", "c"))
+    return s
+
+
+def load_local_excel():
+    """Charge l'excel local (optionnel). Si absent, renvoie df vide."""
+    if not os.path.exists(FICHIER_EXCEL):
+        return pd.DataFrame()
+
+    try:
+        df0 = pd.read_excel(FICHIER_EXCEL, sheet_name="Liste des membres", header=1)
+    except Exception:
+        # Si la feuille n'existe pas / header diff
+        df0 = pd.read_excel(FICHIER_EXCEL)
+
+    df0.columns = safe_normalize_columns(df0.columns)
+    df0 = df0.loc[:, ~df0.columns.duplicated()]
+    return df0
+
+
+def append_local_excel(prenom, nom, tel, adresse, cni):
+    """Optionnel: garde aussi une copie locale dans l'Excel, si présent."""
+    if not os.path.exists(FICHIER_EXCEL):
+        return
+
+    try:
+        df_to_write = pd.read_excel(FICHIER_EXCEL, sheet_name="Liste des membres", header=1)
+    except Exception:
+        df_to_write = pd.read_excel(FICHIER_EXCEL)
+
+    new_row = {
+        "Prénom": prenom,
+        "Nom": nom,
+        "Adresse": adresse,
+        "Téléphone": tel,
+        "CNI": cni
+    }
+    df_to_write = pd.concat([df_to_write, pd.DataFrame([new_row])], ignore_index=True)
+
+    with pd.ExcelWriter(FICHIER_EXCEL, engine="openpyxl") as writer:
+        df_to_write.to_excel(writer, index=False, sheet_name="Liste des membres")
+
+
+# ============================================================
+# 🧭 NAVIGATION
+# ============================================================
+
+df = load_local_excel()
+
 col_adresse = [c for c in df.columns if "adres" in c]
-nb_quartiers = len(df[col_adresse[0]].dropna().unique()) if col_adresse else 0
+nb_quartiers = len(df[col_adresse[0]].dropna().unique()) if (len(df) and col_adresse) else 0
 
-# === ONGLET DE NAVIGATION ===
 tabs = st.tabs([
     "🏠 Accueil",
     f"🏘️ Par Quartier ({nb_quartiers})",
@@ -96,9 +192,10 @@ tabs = st.tabs([
     "🚫 Membres Non Inscrits"
 ])
 
-# ===========================
+# ============================================================
 # 🏠 ONGLET ACCUEIL
-# ===========================
+# ============================================================
+
 with tabs[0]:
     st.markdown("<div class='banner'>MALIKA BI ÑU BËGG – Une nouvelle ère s’annonce 🌍</div>", unsafe_allow_html=True)
     st.title("📘 Base de données du Mouvement - MBB")
@@ -106,9 +203,11 @@ with tabs[0]:
     date_du_jour = datetime.now().strftime("%d %B %Y")
     st.subheader(f"👥 Liste actuelle des membres à la date du {date_du_jour}")
 
-    # 👉 La liste complète n'est visible QUE par les admins connectés
     if st.session_state.authenticated:
-        st.dataframe(df, use_container_width=True)
+        if len(df):
+            st.dataframe(df, use_container_width=True)
+        else:
+            st.info("ℹ️ Aucune donnée locale à afficher (Excel). Les inscriptions partent vers Google Form.")
     else:
         st.info("🔐 La liste détaillée des membres est réservée aux administrateurs.")
 
@@ -117,7 +216,7 @@ with tabs[0]:
 
     col_form, col_login = st.columns(2)
 
-    # === FORMULAIRE PUBLIC D’INSCRIPTION ===
+    # ✅ FORMULAIRE DIRECTEMENT SUR LA PAGE
     with col_form:
         st.markdown("#### 📝 Inscription comme membre")
 
@@ -134,38 +233,34 @@ with tabs[0]:
                 if not (prenom_new and nom_new and tel_new and quartier_new):
                     st.warning("⚠️ Merci de renseigner au minimum Prénom, Nom, Téléphone et Quartier.")
                 else:
-                    # On recharge le fichier brut (sans normalisation des noms de colonnes)
-                    df_to_write = pd.read_excel(FICHIER_EXCEL, sheet_name="Liste des membres", header=1)
+                    ok = post_to_google_form(
+                        prenom=prenom_new.strip(),
+                        nom=nom_new.strip(),
+                        tel=tel_new.strip(),
+                        adresse=quartier_new.strip(),
+                        cni=cni_new.strip()
+                    )
 
-                    # Création de la nouvelle ligne avec les noms de colonnes d'origine
-                    new_row = {
-                        "Prénom": prenom_new,
-                        "Nom": nom_new,
-                        "Adresse": quartier_new,
-                        "Téléphone": tel_new,
-                        "CNI": cni_new
-                    }
+                    if ok:
+                        # Optionnel: copie locale
+                        append_local_excel(prenom_new, nom_new, tel_new, quartier_new, cni_new)
 
-                    df_to_write = pd.concat([df_to_write, pd.DataFrame([new_row])], ignore_index=True)
+                        st.success("✅ Inscription réussie ! Vous êtes membre de BD2027 MBB.")
+                        st.markdown("### 🌐 Rejoignez nos réseaux sociaux")
+                        col1, col2, col3 = st.columns(3)
+                        with col1:
+                            st.markdown("[🌍 Facebook](https://facebook.com)")
+                        with col2:
+                            st.markdown("[📸 Instagram](https://instagram.com)")
+                        with col3:
+                            st.markdown("[💬 WhatsApp](https://wa.me/221770000000)")
+                    else:
+                        st.error("❌ Envoi impossible. Vérifie le lien du Google Form (FORM_BASE_URL) et réessaie.")
 
-                    # Sauvegarde dans le même fichier / même feuille
-                    with pd.ExcelWriter(FICHIER_EXCEL, engine="openpyxl") as writer:
-                        df_to_write.to_excel(writer, index=False, sheet_name="Liste des membres")
-
-                    st.success("✅ Inscription réussie ! Vous êtes membre de BD2027 MBB.")
-
-                    st.markdown("### 🌐 Rejoignez nos réseaux sociaux")
-                    col1, col2, col3 = st.columns(3)
-                    with col1:
-                        st.markdown("[🌍 Facebook](https://facebook.com)")
-                    with col2:
-                        st.markdown("[📸 Instagram](https://instagram.com)")
-                    with col3:
-                        st.markdown("[💬 WhatsApp](https://wa.me/221770000000)")
-
-    # === CONNEXION ADMIN (DANS L’ACCUEIL) ===
+    # 🔐 CONNEXION ADMIN
     with col_login:
         st.markdown("#### 🔐 Connexion administrateur")
+
         if not st.session_state.authenticated:
             username_input = st.text_input("👤 Identifiant", key="login_user")
             password_input = st.text_input("🔑 Mot de passe", type="password", key="login_pwd")
@@ -181,20 +276,22 @@ with tabs[0]:
         else:
             st.success(f"✅ Connecté en tant que **{st.session_state.username}**")
 
-# ===========================
-# 🏘️ ONGLET PAR QUARTIER
-# ===========================
+# ============================================================
+# 🏘️ ONGLET PAR QUARTIER (ADMIN)
+# ============================================================
+
 with tabs[1]:
     if not st.session_state.authenticated:
         st.warning("🔐 Cette section est réservée aux administrateurs.")
     else:
         st.markdown("### 🏘️ Membres regroupés par adresse (quartier)")
-        if not col_adresse:
+
+        if not len(df):
+            st.info("ℹ️ Pas de données Excel locales. Les inscriptions partent vers Google Form.")
+        elif not col_adresse:
             st.error("❌ Colonne 'Adresse' introuvable dans le fichier.")
         else:
             adresse_col = col_adresse[0]
-
-            # Graphique de répartition (tous les quartiers)
             counts = df[adresse_col].value_counts(dropna=True).reset_index()
             counts.columns = ["Quartier", "Nombre de membres"]
 
@@ -211,7 +308,6 @@ with tabs[1]:
             st.plotly_chart(figq, use_container_width=True)
 
             st.divider()
-            # Tables par quartier
             quartiers_uniques = df[adresse_col].dropna().unique()
             total_membres = 0
             for quartier in sorted(quartiers_uniques):
@@ -223,15 +319,16 @@ with tabs[1]:
                 st.divider()
             st.markdown(f"### 🔢 Total général : **{total_membres} membres**")
 
-# ===========================
-# 🗳️ ONGLET CARTE ÉLECTORALE
-# ===========================
+# ============================================================
+# 🗳️ ONGLET CARTE ÉLECTORALE (ADMIN)
+# ============================================================
+
 with tabs[2]:
     if not st.session_state.authenticated:
         st.warning("🔐 Cette section est réservée aux administrateurs.")
     else:
         st.markdown("### 🗳️ Carte électorale – Commune de Malika")
-        st.info("Source : portail officiel [antifraude.parti-pur.com](https://antifraude.parti-pur.com/commune/SENEGAL-DAKAR-KEUR-MASSAR-MALIKA/carte-eletorale)")
+        st.info("Source : portail officiel antifraude.parti-pur.com (lien indicatif).")
 
         data_centres = pd.DataFrame({
             "Centre de vote": [
@@ -244,15 +341,13 @@ with tabs[2]:
             "Longitude": [-17.3085, -17.3120, -17.3048]
         })
 
-        # Graphique barres (texte visible au-dessus des barres)
         st.markdown("#### 📊 Répartition des bureaux de vote par centre")
         fig = px.bar(
-            data_centres, x="Centre de vote", y="Nombre de bureaux", color="Centre de vote",
-            text="Nombre de bureaux",
-            color_discrete_sequence=["#145A32", "#2ECC71", "#F4D03F"],
+            data_centres, x="Centre de vote", y="Nombre de bureaux",
+            color="Centre de vote", text="Nombre de bureaux",
             title="Nombre de bureaux de vote par centre – Commune de Malika"
         )
-        fig.update_traces(textposition="outside", textfont=dict(color="white", size=16), cliponaxis=False)
+        fig.update_traces(textposition="outside", cliponaxis=False)
         fig.update_layout(
             plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)",
             font=dict(color="white", size=14), title_font=dict(size=18)
@@ -261,7 +356,6 @@ with tabs[2]:
 
         st.divider()
 
-        # Carte folium interactive
         st.markdown("#### 🗺️ Localisation des centres de vote sur la carte")
         m = folium.Map(location=[14.7889, -17.3090], zoom_start=15, tiles="CartoDB positron")
         for _, row in data_centres.iterrows():
@@ -273,29 +367,10 @@ with tabs[2]:
             ).add_to(m)
         st_folium(m, width=800, height=500)
 
-        st.divider()
-        # Cartes visuelles
-        st.markdown("#### 🏫 Détails des centres de vote")
-        col1, col2, col3 = st.columns(3)
-        for i, (titre, nb, c1, c2, max_bv) in enumerate([
-            ("École Malika Montagne", 14, "#145A32", "#1E8449", 14),
-            ("École Privée Sanka", 20, "#27AE60", "#F1C40F", 20),
-            ("École Seydi Anta Gadiaga", 18, "#F4D03F", "#145A32", 18)
-        ]):
-            with [col1, col2, col3][i]:
-                st.markdown(f"""
-                <div style='background:linear-gradient(135deg,{c1},{c2});
-                            padding:15px;border-radius:15px;color:white;text-align:center;
-                            box-shadow:2px 2px 8px rgba(0,0,0,0.3);'>
-                    <h4>🏫 {titre}</h4>
-                    <p><b>{nb}</b> bureaux de vote</p>
-                    <p>Bureaux : 1 → {max_bv}</p>
-                </div>
-                """, unsafe_allow_html=True)
+# ============================================================
+# 📝 ONGLET COMPTE RENDU (ADMIN)
+# ============================================================
 
-# ===========================
-# 📝 ONGLET COMPTE RENDU
-# ===========================
 with tabs[3]:
     if not st.session_state.authenticated:
         st.warning("🔐 Cette section est réservée aux administrateurs.")
@@ -303,12 +378,14 @@ with tabs[3]:
         st.markdown("### 📝 Compte Rendu des Réunions")
         st.info("Cette section affichera prochainement les comptes rendus officiels des réunions du mouvement MBB.")
 
-# ===========================
-# 🚫 ONGLET MEMBRES NON INSCRITS
-# ===========================
+# ============================================================
+# 🚫 ONGLET MEMBRES NON INSCRITS (ADMIN)
+# ============================================================
+
 with tabs[4]:
     if not st.session_state.authenticated:
         st.warning("🔐 Cette section est réservée aux administrateurs.")
     else:
         st.markdown("### 🚫 Membres Non Inscrits")
         st.info("Aucune donnée à afficher pour le moment.")
+
