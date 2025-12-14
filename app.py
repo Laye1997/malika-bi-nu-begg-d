@@ -1,15 +1,21 @@
 import streamlit as st
-import os
+import pandas as pd
 from datetime import datetime
 import plotly.express as px
+import os
 import folium
 from streamlit_folium import st_folium
 
 # ============================================================
-# 🔧 CONFIGURATION
+# ✅ CONFIG (SANS SECRETS)
 # ============================================================
 
-FORM_URL = "https://docs.google.com/forms/d/e/XXXXXXXX/viewform?embedded=true"
+# 1) URL CSV (depuis "Publier sur le web" -> CSV)
+CSV_URL = "COLLE_ICI_TON_LIEN_CSV_PUBLIE"
+
+# 2) URL Google Form EMBED (viewform?embedded=true)
+FORM_URL = "COLLE_ICI_TON_LIEN_GOOGLE_FORM_EMBED"
+
 VISUEL = "561812309_122099008227068424_7173387226638749981_n.jpg"
 
 USERS = {
@@ -17,46 +23,45 @@ USERS = {
     "president": "malika2025"
 }
 
-st.set_page_config(
-    page_title="Base de données MBB",
-    page_icon="📘",
-    layout="wide"
-)
+st.set_page_config(page_title="Base de données MBB", page_icon="📘", layout="wide")
 
 # ============================================================
-# 🎨 STYLE GLOBAL
+# 🎨 STYLE
 # ============================================================
 
 st.markdown("""
 <style>
-:root { --vert:#145A32; --jaune:#F4D03F; }
-.stApp {
+:root { --vert:#145A32; --jaune:#F4D03F; --blanc:#FFFFFF; }
+.stApp{
     background: linear-gradient(120deg, var(--vert), var(--jaune));
-    color:white;
-    font-family:"Segoe UI", sans-serif;
+    color: var(--blanc);
+    font-family: "Segoe UI", sans-serif;
 }
-h1,h2,h3 { color:white !important; }
-.banner {
+h1,h2,h3,h4 { color:#FFFFFF !important; }
+.banner{
     background: linear-gradient(90deg, var(--vert), var(--jaune));
+    color:white;
     padding:14px;
     border-radius:12px;
     text-align:center;
-    font-size:22px;
     font-weight:bold;
-    box-shadow:2px 2px 12px rgba(0,0,0,.35);
+    font-size:22px;
+    margin-bottom:16px;
+    box-shadow:2px 2px 12px rgba(0,0,0,0.35);
 }
-.stButton>button {
+.stButton>button{
     background: linear-gradient(45deg, var(--vert), var(--jaune));
     color:white;
-    font-weight:bold;
     border-radius:12px;
+    font-weight:bold;
+    border:none;
     width:100%;
 }
-.stButton>button:hover {
+.stButton>button:hover{
     background: linear-gradient(45deg, var(--jaune), var(--vert));
     color:black;
 }
-header[data-testid="stHeader"], footer, #MainMenu { display:none; }
+header[data-testid="stHeader"], footer, #MainMenu { display:none !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -70,6 +75,26 @@ if "username" not in st.session_state:
     st.session_state.username = None
 
 # ============================================================
+# 📥 CHARGEMENT CSV (PUBLIC)
+# ============================================================
+
+@st.cache_data(show_spinner=False)
+def load_data_from_public_csv(url: str) -> pd.DataFrame:
+    df = pd.read_csv(url)
+
+    # ✅ nettoyage robuste (corrige ton erreur .str sur colonnes non-string)
+    df.columns = [str(c).strip() for c in df.columns]
+
+    # retire colonnes vides éventuelles
+    df = df.dropna(axis=1, how="all")
+    return df
+
+def normalize_text(s: str) -> str:
+    return (str(s).strip().lower()
+            .replace("é", "e").replace("è", "e").replace("ê", "e")
+            .replace("à", "a").replace("ç", "c"))
+
+# ============================================================
 # 🖼️ VISUEL
 # ============================================================
 
@@ -81,73 +106,98 @@ if os.path.exists(VISUEL):
 # ============================================================
 
 tabs = st.tabs([
-    "🏠 Accueil",
+    "🏠 Accueil (Inscription)",
+    "📊 Statistiques",
     "🗳️ Carte électorale",
     "🔐 Administration"
 ])
 
 # ============================================================
-# 🏠 ONGLET ACCUEIL — FORMULAIRE PUBLIC
+# 🏠 ONGLET 1 — FORMULAIRE DIRECT SUR LA PAGE
 # ============================================================
 
 with tabs[0]:
     st.markdown("<div class='banner'>MALIKA BI ÑU BËGG – Une nouvelle ère s’annonce 🌍</div>", unsafe_allow_html=True)
-
     st.title("📘 Mouvement BD2027 – MBB")
     st.subheader("📝 Inscription comme membre")
 
+    # ✅ Form visible directement — aucun lien vers Sheets
     st.markdown(
         f"""
-        <iframe 
-            src="{FORM_URL}" 
-            width="100%" 
-            height="900" 
-            frameborder="0">
+        <iframe
+            src="{FORM_URL}"
+            width="100%"
+            height="900"
+            frameborder="0"
+            style="background:white; border-radius:12px;">
         Chargement…
         </iframe>
         """,
         unsafe_allow_html=True
     )
 
+    st.info("✅ Vos informations sont enregistrées automatiquement. Merci 🙏")
+
 # ============================================================
-# 🗳️ ONGLET CARTE ÉLECTORALE
+# 📊 ONGLET 2 — STATS (lecture depuis CSV publié)
 # ============================================================
 
 with tabs[1]:
-    st.subheader("🗳️ Carte électorale – Commune de Malika")
+    st.subheader("📊 Statistiques")
 
-    data_centres = {
-        "Centre": ["École Malika Montagne", "École Privée Sanka", "École Seydi Anta Gadiaga"],
-        "Bureaux": [14, 20, 18],
-        "Lat": [14.7889, 14.7858, 14.7915],
-        "Lon": [-17.3085, -17.3120, -17.3048]
-    }
+    try:
+        df = load_data_from_public_csv(CSV_URL)
+        st.success("✅ Données chargées.")
 
-    fig = px.bar(
-        data_centres,
-        x="Centre",
-        y="Bureaux",
-        color="Centre",
-        text="Bureaux",
-        title="Répartition des bureaux de vote"
-    )
-    st.plotly_chart(fig, use_container_width=True)
+        # Trouver colonne adresse/quartier
+        cols_norm = {c: normalize_text(c) for c in df.columns}
+        adresse_col = None
+        for c, cn in cols_norm.items():
+            if "adresse" in cn or "quartier" in cn:
+                adresse_col = c
+                break
 
-    m = folium.Map(location=[14.7889, -17.3090], zoom_start=15)
-    for i in range(len(data_centres["Centre"])):
-        folium.Marker(
-            [data_centres["Lat"][i], data_centres["Lon"][i]],
-            popup=data_centres["Centre"][i],
-            icon=folium.Icon(color="green")
-        ).add_to(m)
+        st.write("📅 Mise à jour :", datetime.now().strftime("%d/%m/%Y %H:%M"))
 
-    st_folium(m, height=450)
+        if adresse_col:
+            counts = df[adresse_col].fillna("Non renseigné").value_counts().reset_index()
+            counts.columns = ["Quartier", "Nombre de membres"]
+            fig = px.bar(counts, x="Quartier", y="Nombre de membres", color="Quartier", text="Nombre de membres")
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.warning("Colonne 'Adresse/Quartier' introuvable dans le CSV.")
+
+    except Exception as e:
+        st.error("❌ Impossible de charger les données.")
+        st.code(str(e))
 
 # ============================================================
-# 🔐 ONGLET ADMINISTRATION
+# 🗳️ ONGLET 3 — CARTE
 # ============================================================
 
 with tabs[2]:
+    st.subheader("🗳️ Carte électorale – Commune de Malika")
+
+    data_centres = pd.DataFrame({
+        "Centre": ["École Malika Montagne", "École Privée Sanka", "École Seydi Anta Gadiaga"],
+        "Bureaux": [14, 20, 18],
+        "Lat": [14.7889, 14.7858, 14.7915],
+        "Lon": [-17.3085, -17.3120, -17.3048],
+    })
+
+    fig = px.bar(data_centres, x="Centre", y="Bureaux", color="Centre", text="Bureaux")
+    st.plotly_chart(fig, use_container_width=True)
+
+    m = folium.Map(location=[14.7889, -17.3090], zoom_start=15, tiles="CartoDB positron")
+    for _, r in data_centres.iterrows():
+        folium.Marker([r["Lat"], r["Lon"]], popup=r["Centre"], tooltip=r["Centre"]).add_to(m)
+    st_folium(m, height=450)
+
+# ============================================================
+# 🔐 ONGLET 4 — ADMIN (liste complète + stats)
+# ============================================================
+
+with tabs[3]:
     st.subheader("🔐 Connexion administrateur")
 
     if not st.session_state.authenticated:
@@ -158,16 +208,23 @@ with tabs[2]:
             if user in USERS and USERS[user] == pwd:
                 st.session_state.authenticated = True
                 st.session_state.username = user
-                st.success("Connexion réussie ✔")
+                st.success("✅ Connexion réussie")
                 st.rerun()
             else:
-                st.error("Identifiants incorrects.")
+                st.error("❌ Identifiants incorrects")
     else:
         st.success(f"Connecté en tant que **{st.session_state.username}**")
-        st.info("Les réponses sont stockées automatiquement dans Google Sheets.")
-        st.markdown("📊 Consulte-les directement dans Google Forms → Réponses")
-
         if st.button("Déconnexion"):
             st.session_state.authenticated = False
             st.session_state.username = None
             st.rerun()
+
+        st.divider()
+        st.subheader("📘 Liste complète des membres (lecture CSV)")
+
+        try:
+            df = load_data_from_public_csv(CSV_URL)
+            st.dataframe(df, use_container_width=True)
+        except Exception as e:
+            st.error("Impossible de charger la base.")
+            st.code(str(e))
